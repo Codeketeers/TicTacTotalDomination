@@ -39,6 +39,7 @@ create table dbo.GameMove(
 	GameId int foreign key references dbo.Game not null,
 	PlayerId int foreign key references dbo.Player not null,
 	MoveDate datetime2(7) not null,
+	IsSettingPiece bit not null,
 	X int not null,
 	y int not null,
 )
