@@ -41,6 +41,8 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -58,6 +60,7 @@
     <Compile Include="Models\Mapping\PlayerMap.cs" />
     <Compile Include="Models\Player.cs" />
     <Compile Include="Models\TicTacTotalDominationContext.cs" />
+    <Compile Include="NetworkCommunication\ICommunicationChannel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
