@@ -12,8 +12,8 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
     [ServiceContract]
     public interface ICommunicationChannel
     {
-        ChallengeResult ChallengePlayer(string playerId, string opponentId);
-        MoveResult PostMove(int gameId, string playerId, int x, int y, StatusFlag flag);
+        void ChallengePlayer(string playerId, string opponentId);
+        void PostMove(int gameId, string playerId, int x, int y, StatusFlag flag);
     }
 
     [DataContract]
