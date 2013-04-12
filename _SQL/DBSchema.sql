@@ -20,17 +20,37 @@ create table dbo.Player(
 )
 go
 
-create table dbo.Game(
-	GameId int identity(1,1) primary key not null,
+create table dbo.Match(
+	MatchId int identity(1,1) primary key not null,
+	NumberOfGames int not null,
+	CreateDate datetime2(7) not null,
+	WonDate datetime2(7) null,
 	PlayerOneId int foreign key references dbo.Player not null,
 	PlayerTwoId int foreign key references dbo.Player not null,
 	WinningPlayerId int foreign key references dbo.Player null,
-	CreateDate datetime2(7) not null,
-	WonDate datetime2(7) null,
-	constraint CK_TwoPlayers check(PlayerOneId <> PlayerTwoId),
-	constraint CK_WinnerPlaying check(WinningPlayerId is null
+	constraint CK_Match_TwoPlayers check(PlayerOneId <> PlayerTwoId),
+	constraint CK_Match_WinnerPlaying check(WinningPlayerId is null
 										or WinningPlayerId = PlayerOneId
 										or WinningPlayerId = PlayerTwoId),
+)
+go
+
+create table dbo.Game(
+	GameId int identity(1,1) primary key not null,
+	MatchId int foreign key references dbo.Match null,
+	PlayerOneId int foreign key references dbo.Player not null,
+	PlayerTwoId int foreign key references dbo.Player not null,
+	WinningPlayerId int foreign key references dbo.Player null,
+	CurrentPlayerId int foreign key references dbo.Player null,
+	CreateDate datetime2(7) not null,
+	WonDate datetime2(7) null,
+	constraint CK_Game_TwoPlayers check(PlayerOneId <> PlayerTwoId),
+	constraint CK_Game_WinnerPlaying check(WinningPlayerId is null
+										or WinningPlayerId = PlayerOneId
+										or WinningPlayerId = PlayerTwoId),
+	constraint CK_Game_CurrentPlayerPlaying check(CurrentPlayerId is null
+												or CurrentPlayerId = PlayerOneId
+												or CurrentPlayerId = PlayerTwoId)
 )
 go
 
@@ -42,6 +62,13 @@ create table dbo.GameMove(
 	IsSettingPiece bit not null,
 	X int not null,
 	y int not null,
+)
+go
+
+create table dbo.CentralServerSession(
+	CentralServerSessionId int identity(1,1) primary key not null,
+	CentralServerGameId int null,
+	GameId int foreign key references dbo.Game not null,
 )
 go
 

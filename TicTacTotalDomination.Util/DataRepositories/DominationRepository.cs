@@ -17,6 +17,11 @@ namespace TicTacTotalDomination.Util.DataRepositories
             this.Context = new TicTacTotalDominationContext(connectionString);
         }
 
+        IQueryable<Match> IDominationRepository.GetMatches()
+        {
+            return this.Context.Matches.AsNoTracking();
+        }
+
         IQueryable<Game> IDominationRepository.GetGames()
         {
             return this.Context.Games.AsNoTracking();
@@ -32,23 +37,42 @@ namespace TicTacTotalDomination.Util.DataRepositories
             return this.Context.Players.AsNoTracking();
         }
 
+        IQueryable<CentralServerSession> IDominationRepository.GetCentralServerSessions()
+        {
+            return this.Context.CentralServerSessions.AsNoTracking();
+        }
+
+        Match IDominationRepository.CreateMatch()
+        {
+            var result = new Match();
+            this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
+            return result;
+        }
+
         Game IDominationRepository.CreateGame()
         {
-            Game result = new Game();
+            var result = new Game();
             this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
             return result;
         }
 
         GameMove IDominationRepository.CreateGameMove()
         {
-            GameMove result = new GameMove();
+            var result = new GameMove();
             this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
             return result;
         }
 
         Player IDominationRepository.CreatePlayer()
         {
-            Player result = new Player();
+            var result = new Player();
+            this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
+            return result;
+        }
+
+        CentralServerSession IDominationRepository.CreateCentralServerSession()
+        {
+            var result = new CentralServerSession();
             this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
             return result;
         }
@@ -69,6 +93,12 @@ namespace TicTacTotalDomination.Util.DataRepositories
         }
 
         #region Disposable
+        void IDisposable.Dispose()
+        {
+            GC.SuppressFinalize(this);
+            this.Dispose(true);
+        }
+        
         private void Dispose(bool disposing)
         {
             if (!this.disposed)
