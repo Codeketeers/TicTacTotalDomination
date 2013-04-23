@@ -40,6 +40,7 @@ namespace TicTacTotalDomination.Util.DataServices
             result.PlayerOneId = playerOne.PlayerId;
             result.PlayerTwoId = playerTwo.PlayerId;
             result.CreateDate = DateTime.Now;
+            result.StateDate = result.CreateDate;
             this.repository.Save();
 
             return result;
@@ -80,6 +81,23 @@ namespace TicTacTotalDomination.Util.DataServices
             return result;
         }
 
+        AIGame IGameDataService.CreateAIGame(Player player, Game game, Match match)
+        {
+            AIGame result = this.repository.CreateAIGame();
+            result.PlayerId = player.PlayerId;
+            result.GameId = game.GameId;
+
+            if (match != null)
+                result.MatchId = match.MatchId;
+
+            return result;
+        }
+
+        AIGame IGameDataService.GetAIGame(int gameId)
+        {
+            return this.repository.GetAIGames().FirstOrDefault(aiGame => aiGame.GameId == gameId);
+        }
+
         Models.CentralServerSession IGameDataService.CreateCentralServerSession(int gameId)
         {
             CentralServerSession result = this.repository.CreateCentralServerSession();
@@ -112,6 +130,11 @@ namespace TicTacTotalDomination.Util.DataServices
             return this.repository.GetGameMoves().Where(move => move.GameId == gameId).ToList();
         }
 
+        IEnumerable<AIAttentionRequiredResult> IGameDataService.GetAIGamesRequiringAttention()
+        {
+            return this.repository.GetAIGamesRequiringAttention().ToList();
+        }
+
         void IGameDataService.Move(int gameId, int playerId, int? origX, int? origY, int x, int y)
         {
             Game game = this.repository.GetGames().FirstOrDefault(dbGame => dbGame.GameId == gameId);
@@ -137,7 +160,35 @@ namespace TicTacTotalDomination.Util.DataServices
                 move.X = x;
                 move.y = y;
 
+                this.repository.Attach(game);
+                game.StateDate = moveDateTime;
+
                 this.repository.Save();
+            }
+        }
+
+        void IGameDataService.SetPlayerTurn(int gameId, int playerId)
+        {
+            Game game = (this as IGameDataService).GetGame(gameId);
+            if (game != null && (game.PlayerOneId == playerId || game.PlayerTwoId == playerId))
+            {
+                this.repository.Attach(game);
+                game.CurrentPlayerId = playerId;
+                game.StateDate = DateTime.Now;
+            }
+        }
+
+        void IGameDataService.SwapPlayerTurn(int gameId)
+        {
+            Game game = (this as IGameDataService).GetGame(gameId);
+            if (game != null)
+            {
+                this.repository.Attach(game);
+                if (game.CurrentPlayerId == game.PlayerOneId)
+                    game.CurrentPlayerId = game.PlayerTwoId;
+                else if (game.CurrentPlayerId == game.PlayerTwoId)
+                    game.CurrentPlayerId = game.PlayerOneId;
+                //Otherwise, there is no current player, so we have to way of knowing how to swap. Do nothing.
             }
         }
 

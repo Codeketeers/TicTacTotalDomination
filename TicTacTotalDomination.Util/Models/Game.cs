@@ -7,6 +7,7 @@ namespace TicTacTotalDomination.Util.Models
     {
         public Game()
         {
+            this.AIGames = new List<AIGame>();
             this.CentralServerSessions = new List<CentralServerSession>();
             this.GameMoves = new List<GameMove>();
         }
@@ -17,8 +18,10 @@ namespace TicTacTotalDomination.Util.Models
         public int PlayerTwoId { get; set; }
         public Nullable<int> WinningPlayerId { get; set; }
         public Nullable<int> CurrentPlayerId { get; set; }
+        public System.DateTime StateDate { get; set; }
         public System.DateTime CreateDate { get; set; }
         public Nullable<System.DateTime> WonDate { get; set; }
+        public virtual ICollection<AIGame> AIGames { get; set; }
         public virtual ICollection<CentralServerSession> CentralServerSessions { get; set; }
         public virtual Player Player { get; set; }
         public virtual Match Match { get; set; }

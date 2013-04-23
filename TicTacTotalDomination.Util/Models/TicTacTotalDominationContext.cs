@@ -12,10 +12,11 @@ namespace TicTacTotalDomination.Util.Models
         }
 
         public TicTacTotalDominationContext()
-            : base("Name=TicTacTotalDominationContext") { }
-        public TicTacTotalDominationContext(string connectionString)
-            : base(connectionString) { }
+            : base("Name=TicTacTotalDominationContext")
+        {
+        }
 
+        public DbSet<AIGame> AIGames { get; set; }
         public DbSet<CentralServerSession> CentralServerSessions { get; set; }
         public DbSet<Game> Games { get; set; }
         public DbSet<GameMove> GameMoves { get; set; }
@@ -24,6 +25,7 @@ namespace TicTacTotalDomination.Util.Models
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
+            modelBuilder.Configurations.Add(new AIGameMap());
             modelBuilder.Configurations.Add(new CentralServerSessionMap());
             modelBuilder.Configurations.Add(new GameMap());
             modelBuilder.Configurations.Add(new GameMoveMap());

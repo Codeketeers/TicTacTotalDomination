@@ -42,6 +42,16 @@ namespace TicTacTotalDomination.Util.DataRepositories
             return this.Context.CentralServerSessions.AsNoTracking();
         }
 
+        IQueryable<AIGame> IDominationRepository.GetAIGames()
+        {
+            return this.Context.AIGames.AsNoTracking();
+        }
+
+        IQueryable<AIAttentionRequiredResult> IDominationRepository.GetAIGamesRequiringAttention()
+        {
+            return this.Context.GetAIGamesRequiringAttention();
+        }
+
         Match IDominationRepository.CreateMatch()
         {
             var result = new Match();
@@ -73,6 +83,13 @@ namespace TicTacTotalDomination.Util.DataRepositories
         CentralServerSession IDominationRepository.CreateCentralServerSession()
         {
             var result = new CentralServerSession();
+            this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
+            return result;
+        }
+
+        AIGame IDominationRepository.CreateAIGame()
+        {
+            var result = new AIGame();
             this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
             return result;
         }

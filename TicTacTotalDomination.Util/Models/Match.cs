@@ -7,6 +7,7 @@ namespace TicTacTotalDomination.Util.Models
     {
         public Match()
         {
+            this.AIGames = new List<AIGame>();
             this.Games = new List<Game>();
         }
 
@@ -17,6 +18,7 @@ namespace TicTacTotalDomination.Util.Models
         public int PlayerOneId { get; set; }
         public int PlayerTwoId { get; set; }
         public Nullable<int> WinningPlayerId { get; set; }
+        public virtual ICollection<AIGame> AIGames { get; set; }
         public virtual ICollection<Game> Games { get; set; }
         public virtual Player Player { get; set; }
         public virtual Player Player1 { get; set; }

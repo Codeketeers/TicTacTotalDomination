@@ -42,6 +42,7 @@ create table dbo.Game(
 	PlayerTwoId int foreign key references dbo.Player not null,
 	WinningPlayerId int foreign key references dbo.Player null,
 	CurrentPlayerId int foreign key references dbo.Player null,
+	StateDate datetime2(7) not null,
 	CreateDate datetime2(7) not null,
 	WonDate datetime2(7) null,
 	constraint CK_Game_TwoPlayers check(PlayerOneId <> PlayerTwoId),
@@ -51,6 +52,15 @@ create table dbo.Game(
 	constraint CK_Game_CurrentPlayerPlaying check(CurrentPlayerId is null
 												or CurrentPlayerId = PlayerOneId
 												or CurrentPlayerId = PlayerTwoId)
+)
+go
+
+create table dbo.AIGame(
+	AIGameId int identity(1,1) primary key not null,
+	MatchId int foreign key references dbo.Match null,
+	GameId int foreign key references dbo.Game not null,
+	PlayerId int foreign key references dbo.Player not null,
+	EvaluatingMove bit not null,
 )
 go
 
@@ -70,6 +80,28 @@ create table dbo.CentralServerSession(
 	CentralServerGameId int null,
 	GameId int foreign key references dbo.Game not null,
 )
+go
+
+--Stored Procedure Creation
+create procedure dbo.sp_GetAIGamesForEvaluation
+as
+begin
+	declare @GamesForEvaluation table (GameId int, PlayerId int);
+	
+	--Mark the games requiring AI attention as being attended to and retrieve them.
+	update ai
+	set ai.EvaluatingMove = 1
+	output inserted.GameId, inserted.PlayerId into @GamesForEvaluation
+	from dbo.AIGame ai
+		join dbo.Game gm
+			on ai.GameId = gm.GameId
+				and ai.PlayerId = gm.CurrentPlayerId
+	where gm.WonDate is null
+		and gm.WinningPlayerId is null
+		and ai.EvaluatingMove = 0;
+
+	select * from @GamesForEvaluation
+end
 go
 
 --User Creation
