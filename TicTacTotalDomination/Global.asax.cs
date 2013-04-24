@@ -29,6 +29,11 @@ namespace TicTacTotalDomination
                 new { controller = "Home", action = "Index", id = UrlParameter.Optional } // Parameter defaults
             );
 
+            routes.MapRoute(
+                "API Default",
+                "api/{controller}/{action}/{id}",
+                new { id = UrlParameter.Optional });
+
         }
 
         protected void Application_Start()

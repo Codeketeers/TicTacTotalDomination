@@ -15,6 +15,14 @@ namespace TicTacTotalDomination.Util.Games
         //public static TicTacToeHost Instance { get { return _Instance.Value; } }
         //private TicTacToeHost() { }
 
+        public Player SignInPlayer(string playerName)
+        {
+            using (IGameDataService gameDataService = new GameDataService())
+            {
+                return gameDataService.GetOrCreatePlayer(playerName);
+            }
+        }
+
         public Notification GetNotification(int playerId, int? currentGameId)
         {
             Notification result = new Notification() { Notifications = new List<Notification.NotificationGame>() };
