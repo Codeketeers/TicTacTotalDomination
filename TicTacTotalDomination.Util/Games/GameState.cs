@@ -5,7 +5,7 @@ using System.Text;
 
 namespace TicTacTotalDomination.Util.Games
 {
-    public enum PlayMode { None, Playing, DeathMatch, Won }
+    public enum PlayMode { None, Playing, DeathMatch, Won, Ended }
 
     public class GameState
     {

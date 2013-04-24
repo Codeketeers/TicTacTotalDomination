@@ -22,6 +22,7 @@ namespace TicTacTotalDomination.Util.Models.Mapping
             this.Property(t => t.StateDate).HasColumnName("StateDate");
             this.Property(t => t.CreateDate).HasColumnName("CreateDate");
             this.Property(t => t.WonDate).HasColumnName("WonDate");
+            this.Property(t => t.EndDate).HasColumnName("EndDate");
 
             // Relationships
             this.HasOptional(t => t.Player)

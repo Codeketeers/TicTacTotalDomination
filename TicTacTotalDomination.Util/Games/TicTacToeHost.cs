@@ -10,9 +10,39 @@ namespace TicTacTotalDomination.Util.Games
 {
     public class TicTacToeHost
     {
-        private static Lazy<TicTacToeHost> _Instance = new Lazy<TicTacToeHost>(() => new TicTacToeHost());
-        public static TicTacToeHost Instance { get { return _Instance.Value; } }
-        private TicTacToeHost() { }
+        //Probably don't need this to be singleton. There's no resources necessary to restrict.
+        //private static Lazy<TicTacToeHost> _Instance = new Lazy<TicTacToeHost>(() => new TicTacToeHost());
+        //public static TicTacToeHost Instance { get { return _Instance.Value; } }
+        //private TicTacToeHost() { }
+
+        public Notification GetNotification(int playerId, int? currentGameId)
+        {
+            Notification result = new Notification() { Notifications = new List<Notification.NotificationGame>() };
+
+            using (IGameDataService gameDataService = new GameDataService())
+            {
+                IEnumerable<Game> allGames = gameDataService.GetGamesForPlayer(playerId);
+                IEnumerable<Game> currentGames = allGames.Where(game => game.EndDate == null && (currentGameId != null ? game.GameId != currentGameId.Value : true));
+
+                foreach (var game in currentGames)
+                {
+                    IEnumerable<GameMove> myMoves = gameDataService.GetGameMoves(game.GameId).Where(move => move.PlayerId == playerId);
+                    if (myMoves.Any() || game.CurrentPlayerId == playerId)
+                    {
+                        Player opponent = gameDataService.GetPlayer(game.PlayerOneId == playerId ? game.PlayerTwoId : game.PlayerOneId);
+                        result.Notifications.Add(new Notification.NotificationGame()
+                                                {
+                                                    GameId = game.GameId,
+                                                    OpponentName = opponent.PlayerName,
+                                                    MyTurn = game.CurrentPlayerId == playerId,
+                                                    NewGame = !myMoves.Any()
+                                                });
+                    }
+                }
+            }
+
+            return result;
+        }
 
         /// <summary>
         /// Set up a new game between two players. Will return the id of the created game.
@@ -90,12 +120,14 @@ namespace TicTacTotalDomination.Util.Games
                 if (game != null)
                 {
                     result = new GameState();
-                    if (game.CurrentPlayerId == null && game.WonDate == null)
+                    if (game.CurrentPlayerId == null && game.WonDate == null && game.EndDate == null)
                         result.Mode = PlayMode.None;
-                    else if (game.WonDate == null)
+                    else if (game.WonDate == null && game.EndDate == null)
                         result.Mode = PlayMode.Playing;
-                    else
+                    else if (game.WonDate != null)
                         result.Mode = PlayMode.Won;
+                    else
+                        result.Mode = PlayMode.Ended;
 
                     result.GameBoard = new int?[3][]
                                         {

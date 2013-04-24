@@ -59,6 +59,7 @@
     <Compile Include="Games\GameConfiguration.cs" />
     <Compile Include="Games\GameState.cs" />
     <Compile Include="Games\Move.cs" />
+    <Compile Include="Games\Notification.cs" />
     <Compile Include="Games\TicTacToeHost.cs" />
     <Compile Include="Models\AIGame.cs" />
     <Compile Include="Models\CentralServerSession.cs" />

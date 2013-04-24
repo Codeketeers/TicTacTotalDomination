@@ -45,6 +45,7 @@ create table dbo.Game(
 	StateDate datetime2(7) not null,
 	CreateDate datetime2(7) not null,
 	WonDate datetime2(7) null,
+	EndDate datetime2(7) null,
 	constraint CK_Game_TwoPlayers check(PlayerOneId <> PlayerTwoId),
 	constraint CK_Game_WinnerPlaying check(WinningPlayerId is null
 										or WinningPlayerId = PlayerOneId

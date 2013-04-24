@@ -13,6 +13,8 @@ namespace TicTacTotalDomination.Util.DataServices
         private bool disposed = false;
         private IDominationRepository repository;
 
+        public IDominationRepository Repository { get { return this.repository; } }
+
         public GameDataService()
         {
             string connecitonString = ConfigurationManager.ConnectionStrings["TicTacTotalDomination"].ConnectionString;
@@ -31,6 +33,11 @@ namespace TicTacTotalDomination.Util.DataServices
             }
 
             return result;
+        }
+
+        Player IGameDataService.GetPlayer(int playerId)
+        {
+            return this.repository.GetPlayers().FirstOrDefault(player => player.PlayerId == playerId);
         }
 
         Models.Game IGameDataService.CreateGame(Models.Player playerOne, Models.Player playerTwo, Models.Match match)
@@ -125,6 +132,11 @@ namespace TicTacTotalDomination.Util.DataServices
             return result;
         }
 
+        IEnumerable<Game> IGameDataService.GetGamesForPlayer(int playerId)
+        {
+            return this.repository.GetGames().Where(game => game.PlayerOneId == playerId || game.PlayerTwoId == playerId).ToList();
+        }
+
         IEnumerable<Models.GameMove> IGameDataService.GetGameMoves(int gameId)
         {
             return this.repository.GetGameMoves().Where(move => move.GameId == gameId).ToList();
@@ -137,7 +149,7 @@ namespace TicTacTotalDomination.Util.DataServices
 
         void IGameDataService.Move(int gameId, int playerId, int? origX, int? origY, int x, int y)
         {
-            Game game = this.repository.GetGames().FirstOrDefault(dbGame => dbGame.GameId == gameId);
+            Game game = (this as IGameDataService).GetGame(gameId);
             if (game != null && (game.PlayerOneId == playerId || game.PlayerTwoId == playerId))
             {
                 DateTime moveDateTime = DateTime.Now;
@@ -151,7 +163,7 @@ namespace TicTacTotalDomination.Util.DataServices
                     originUnset.X = origX.Value;
                     originUnset.y = origY.Value;
                 }
-
+                
                 GameMove move = this.repository.CreateGameMove();
                 move.GameId = gameId;
                 move.IsSettingPiece = true;
@@ -189,6 +201,23 @@ namespace TicTacTotalDomination.Util.DataServices
                 else if (game.CurrentPlayerId == game.PlayerTwoId)
                     game.CurrentPlayerId = game.PlayerOneId;
                 //Otherwise, there is no current player, so we have to way of knowing how to swap. Do nothing.
+            }
+        }
+
+        void IGameDataService.EndGame(int gameId, int? winningPlayer)
+        {
+            Game game = (this as IGameDataService).GetGame(gameId);
+            if (game != null)
+            {
+                DateTime endDate = DateTime.Now;
+                this.repository.Attach(game);
+                game.EndDate = endDate;
+
+                if (winningPlayer != null && (winningPlayer == game.PlayerOneId || winningPlayer == game.PlayerTwoId))
+                {
+                    game.WinningPlayerId = winningPlayer;
+                    game.WonDate = endDate;
+                }
             }
         }
 

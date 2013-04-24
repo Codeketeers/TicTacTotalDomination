@@ -21,6 +21,7 @@ namespace TicTacTotalDomination.Util.Models
         public System.DateTime StateDate { get; set; }
         public System.DateTime CreateDate { get; set; }
         public Nullable<System.DateTime> WonDate { get; set; }
+        public Nullable<System.DateTime> EndDate { get; set; }
         public virtual ICollection<AIGame> AIGames { get; set; }
         public virtual ICollection<CentralServerSession> CentralServerSessions { get; set; }
         public virtual Player Player { get; set; }
