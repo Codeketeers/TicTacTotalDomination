@@ -14,7 +14,13 @@ namespace TicTacTotalDomination.Controllers
 
         public GameController()
         {
-            this.host = new TicTacToeHost();
+            this.host = TicTacToeHost.Instance;
+        }
+
+        [HttpGet]
+        public Notification GetNotification(int playerId, int? gameId)
+        {
+            return this.host.GetNotification(playerId, gameId);
         }
 
         [HttpPost]
@@ -24,9 +30,9 @@ namespace TicTacTotalDomination.Controllers
         }
 
         [HttpPost]
-        public int ConfigureGame(GameConfiguration config)
+        public int StartMatch(GameConfiguration config)
         {
-            return this.host.ConfigureGame(config);
+            return this.host.InitiateChallenge(config);
         }
 
         [HttpGet]
@@ -39,6 +45,18 @@ namespace TicTacTotalDomination.Controllers
         public GameState GetGameState(int gameId, int playerId)
         {
             return this.host.GetGameState(gameId, playerId);
+        }
+
+        [HttpGet]
+        public bool GetHasMatchStateChanged(int matchId, string stateDateString)
+        {
+            return this.host.IsMatchStateChanged(matchId, stateDateString);
+        }
+
+        [HttpGet]
+        public MatchState GetMatchState(int matchId, int playerId)
+        {
+            return this.host.GetMatchState(matchId, playerId);
         }
 
         [HttpPost]

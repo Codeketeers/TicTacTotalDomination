@@ -25,8 +25,13 @@ create table dbo.Match(
 	NumberOfGames int not null,
 	CreateDate datetime2(7) not null,
 	WonDate datetime2(7) null,
+	EndDate datetime2(7) null,
+	StateDate datetime2(7) not null,
+	NumberOfRounds int not null,
 	PlayerOneId int foreign key references dbo.Player not null,
+	PlayerOneAccepted bit null,
 	PlayerTwoId int foreign key references dbo.Player not null,
+	PlayerTwoAccepted bit null,
 	WinningPlayerId int foreign key references dbo.Player null,
 	constraint CK_Match_TwoPlayers check(PlayerOneId <> PlayerTwoId),
 	constraint CK_Match_WinnerPlaying check(WinningPlayerId is null
@@ -35,11 +40,20 @@ create table dbo.Match(
 )
 go
 
+create table dbo.ConfigSection(
+	SectionId int identity(1,1) primary key not null,
+	MatchId int foreign key references dbo.Match not null,
+	Section varchar(500) not null
+)
+go
+
 create table dbo.Game(
 	GameId int identity(1,1) primary key not null,
-	MatchId int foreign key references dbo.Match null,
+	MatchId int foreign key references dbo.Match not null,
 	PlayerOneId int foreign key references dbo.Player not null,
+	PlayerOneAccepted bit null,
 	PlayerTwoId int foreign key references dbo.Player not null,
+	PlayerTwoAccepted bit null,
 	WinningPlayerId int foreign key references dbo.Player null,
 	CurrentPlayerId int foreign key references dbo.Player null,
 	StateDate datetime2(7) not null,
@@ -54,6 +68,10 @@ create table dbo.Game(
 												or CurrentPlayerId = PlayerOneId
 												or CurrentPlayerId = PlayerTwoId)
 )
+go
+
+alter table dbo.Match
+add CurrentGameId int foreign key references dbo.Game null
 go
 
 create table dbo.AIGame(

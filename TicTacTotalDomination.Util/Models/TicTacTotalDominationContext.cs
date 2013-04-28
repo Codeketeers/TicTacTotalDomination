@@ -18,6 +18,7 @@ namespace TicTacTotalDomination.Util.Models
 
         public DbSet<AIGame> AIGames { get; set; }
         public DbSet<CentralServerSession> CentralServerSessions { get; set; }
+        public DbSet<ConfigSection> ConfigSections { get; set; }
         public DbSet<Game> Games { get; set; }
         public DbSet<GameMove> GameMoves { get; set; }
         public DbSet<Match> Matches { get; set; }
@@ -27,6 +28,7 @@ namespace TicTacTotalDomination.Util.Models
         {
             modelBuilder.Configurations.Add(new AIGameMap());
             modelBuilder.Configurations.Add(new CentralServerSessionMap());
+            modelBuilder.Configurations.Add(new ConfigSectionMap());
             modelBuilder.Configurations.Add(new GameMap());
             modelBuilder.Configurations.Add(new GameMoveMap());
             modelBuilder.Configurations.Add(new MatchMap());

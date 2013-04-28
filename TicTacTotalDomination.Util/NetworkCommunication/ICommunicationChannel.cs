@@ -7,7 +7,7 @@ using System.Text;
 
 namespace TicTacTotalDomination.Util.NetworkCommunication
 {
-    public enum StatusFlag{None, WinningMove, DrawMove, ChallengeWin, ChallengeMove, AcceptLoss}
+    public enum StatusFlag { None, WinningMove, DrawMove, ChallengeWin, ChallengeMove, AcceptLoss }
 
     [ServiceContract]
     public interface ICommunicationChannel : IDisposable
@@ -18,7 +18,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
         /// <param name="playerName">The (local) player name.</param>
         /// <param name="opponentName">The name of the player being challenged.</param>
         /// <param name="gameId">The TicTacTotalDomination game id of the game to be played.</param>
-        void ChallengePlayer(string playerName, string opponentName, int gameId);
+        void ChallengePlayer(int matchId);
         /// <summary>
         /// Submits a move to the central server when playing against an oponent.
         /// </summary>
@@ -26,8 +26,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
         /// <param name="playerName">The name of the player who is posting the move.</param>
         /// <param name="x">The x coordinate of the move. If the move is resolving a draw conflict, this needs to be the x coordinate of the originating move.</param>
         /// <param name="y">The x coordinate of the move. If the move is resolving a draw conflict, this needs to be the x coordinate of the originating move.</param>
-        /// <param name="flag">The flag (if any necessary) to indicate state of the game.</param>
-        void PostMove(int gameId, string playerName, int x, int y, StatusFlag flag);
+        void PostMove(int matchId, int x, int y);
     }
 
     [DataContract]

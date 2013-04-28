@@ -43,7 +43,7 @@ namespace TicTacTotalDomination.Util.DataServices
         Models.Game IGameDataService.CreateGame(Models.Player playerOne, Models.Player playerTwo, Models.Match match)
         {
             Game result = this.repository.CreateGame();
-            result.MatchId = match != null ? new Nullable<int>(match.MatchId) : null;
+            result.MatchId = match.MatchId;
             result.PlayerOneId = playerOne.PlayerId;
             result.PlayerTwoId = playerTwo.PlayerId;
             result.CreateDate = DateTime.Now;
@@ -132,9 +132,30 @@ namespace TicTacTotalDomination.Util.DataServices
             return result;
         }
 
+        ConfigSection IGameDataService.CreateConfigSection(int matchId, string contents)
+        {
+            ConfigSection result = this.repository.CreateConfigSection();
+            result.MatchId = matchId;
+            result.Section = contents;
+
+            return result;
+        }
+
+        IEnumerable<ConfigSection> IGameDataService.GetConfigSections(int matchId)
+        {
+            return this.repository.GetConfigSections().Where(section => section.MatchId == matchId).ToList();
+        }
+
         IEnumerable<Game> IGameDataService.GetGamesForPlayer(int playerId)
         {
             return this.repository.GetGames().Where(game => game.PlayerOneId == playerId || game.PlayerTwoId == playerId).ToList();
+        }
+
+        IEnumerable<Match> IGameDataService.GetPendingMatchesForPlayer(int playerId)
+        {
+            return this.repository.GetMatches().Where(game => ((game.PlayerOneId == playerId && game.PlayerOneAccepted == null) 
+                                                                || (game.PlayerTwoId == playerId && game.PlayerTwoAccepted == null))
+                                                            && game.EndDate == null).ToList();
         }
 
         IEnumerable<Models.GameMove> IGameDataService.GetGameMoves(int gameId)

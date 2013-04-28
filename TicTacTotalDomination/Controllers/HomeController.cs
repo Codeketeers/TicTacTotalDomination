@@ -24,6 +24,7 @@ namespace TicTacTotalDomination.Controllers
 
             HttpContext.Session["playerName"] = player.PlayerName;
             HttpContext.Session["playerId"] = player.PlayerId;
+            HttpContext.Session["loggedIn"] = true;
 
             return RedirectToAction("Index");
         }

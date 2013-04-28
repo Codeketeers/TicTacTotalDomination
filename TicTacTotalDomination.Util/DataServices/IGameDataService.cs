@@ -21,7 +21,10 @@ namespace TicTacTotalDomination.Util.DataServices
         AIGame GetAIGame(int gameId);
         CentralServerSession CreateCentralServerSession(int gameId);
         CentralServerSession GetCentralServerSession(int? sessionId, int? centralServerGameId, int? gameId);
+        ConfigSection CreateConfigSection(int matchId, string contents);
+        IEnumerable<ConfigSection> GetConfigSections(int matchId);
         IEnumerable<Game> GetGamesForPlayer(int playerId);
+        IEnumerable<Match> GetPendingMatchesForPlayer(int playerId);
         IEnumerable<GameMove> GetGameMoves(int gameId);
         IEnumerable<AIAttentionRequiredResult> GetAIGamesRequiringAttention();
         void Move(int gameId, int playerId, int? origX, int? origY, int x, int y);

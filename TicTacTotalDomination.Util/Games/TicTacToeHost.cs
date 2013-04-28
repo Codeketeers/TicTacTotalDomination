@@ -2,18 +2,42 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using TicTacTotalDomination.Util.Caching;
 using TicTacTotalDomination.Util.DataServices;
 using TicTacTotalDomination.Util.Models;
 using TicTacTotalDomination.Util.NetworkCommunication;
+using TicTacTotalDomination.Util.Serialization;
 
 namespace TicTacTotalDomination.Util.Games
 {
+    public class ChallengeEventArgs : EventArgs
+    {
+        public int PlayerOneId { get; set; }
+        public int PlayerTwoId { get; set; }
+        public int MatchId { get; set; }
+    }
+
+    public class MoveEventArgs : EventArgs
+    {
+        public int MatchId { get; set; }
+        public int PlayerId { get; set; }
+        public int? OriginX { get; set; }
+        public int? OriginY { get; set; }
+        public int X { get; set; }
+        public int Y { get; set; }
+    }
+
+    public delegate void ChallengeEventHandler(object sender, ChallengeEventArgs e);
+    public delegate void MoveEventHandler(object sender, MoveEventArgs e);
+
     public class TicTacToeHost
     {
-        //Probably don't need this to be singleton. There's no resources necessary to restrict.
-        //private static Lazy<TicTacToeHost> _Instance = new Lazy<TicTacToeHost>(() => new TicTacToeHost());
-        //public static TicTacToeHost Instance { get { return _Instance.Value; } }
-        //private TicTacToeHost() { }
+        private static Lazy<TicTacToeHost> _Instance = new Lazy<TicTacToeHost>(() => new TicTacToeHost());
+        public static TicTacToeHost Instance { get { return _Instance.Value; } }
+        private TicTacToeHost() { }
+
+        public event ChallengeEventHandler PlayerChallenge;
+        public event MoveEventHandler PlayerMove;
 
         public Player SignInPlayer(string playerName)
         {
@@ -23,81 +47,153 @@ namespace TicTacTotalDomination.Util.Games
             }
         }
 
-        public Notification GetNotification(int playerId, int? currentGameId)
+        public Notification GetNotification(int playerId, int? matchId)
         {
-            Notification result = new Notification() { Notifications = new List<Notification.NotificationGame>() };
+            Notification result = new Notification() { Notifications = new List<Notification.NotificationMatch>() };
 
             using (IGameDataService gameDataService = new GameDataService())
             {
-                IEnumerable<Game> allGames = gameDataService.GetGamesForPlayer(playerId);
-                IEnumerable<Game> currentGames = allGames.Where(game => game.EndDate == null && (currentGameId != null ? game.GameId != currentGameId.Value : true));
+                IEnumerable<Match> matches = gameDataService.GetPendingMatchesForPlayer(playerId);
 
-                foreach (var game in currentGames)
+                foreach (var match in matches)
                 {
-                    IEnumerable<GameMove> myMoves = gameDataService.GetGameMoves(game.GameId).Where(move => move.PlayerId == playerId);
-                    if (myMoves.Any() || game.CurrentPlayerId == playerId)
-                    {
-                        Player opponent = gameDataService.GetPlayer(game.PlayerOneId == playerId ? game.PlayerTwoId : game.PlayerOneId);
-                        result.Notifications.Add(new Notification.NotificationGame()
-                                                {
-                                                    GameId = game.GameId,
-                                                    OpponentName = opponent.PlayerName,
-                                                    MyTurn = game.CurrentPlayerId == playerId,
-                                                    NewGame = !myMoves.Any()
-                                                });
-                    }
+                    Player opponent = gameDataService.GetPlayer(match.PlayerOneId == playerId ? match.PlayerTwoId : match.PlayerOneId);
+                    result.Notifications.Add(new Notification.NotificationMatch()
+                                            {
+                                                OpponentName = opponent.PlayerName,
+                                                MatchId = match.MatchId
+                                            });
                 }
             }
 
             return result;
         }
 
-        /// <summary>
-        /// Set up a new game between two players. Will return the id of the created game.
-        /// </summary>
-        /// <param name="config">The parameters necessary to set up the game.</param>
-        /// <returns></returns>
-        public int ConfigureGame(GameConfiguration config)
+        public int InitiateChallenge(GameConfiguration config)
         {
             using (IGameDataService gameDataService = new GameDataService())
             {
                 Models.Player playerOne = gameDataService.GetOrCreatePlayer(config.PlayerOne.Name);
                 Models.Player playerTwo = gameDataService.GetOrCreatePlayer(config.PlayerTwo.Name);
-
-                //Create a game, as well as a match in case the players play multiple games in a row.
                 Models.Match match = gameDataService.CreateMatch(playerOne, playerTwo);
-                Models.Game game = gameDataService.CreateGame(playerOne, playerTwo, match);
+                match.PlayerOneAccepted = true;
+                match.StateDate = DateTime.Now;
 
-                //Make an entry in the table for AI to track the game.
-                Models.AIGame aiPlayerOne;
-                if(config.PlayerOne.PlayerType == PlayerType.AI)
-                    aiPlayerOne = gameDataService.CreateAIGame(playerOne, game, match);
-
-                //We only want to be responsible for managing local AIs.
-                //If it's networked, don't record it.
-                Models.AIGame aiPlayerTwo;
-                if(config.PlayerTwo.PlayerType == PlayerType.AI && config.GameType != GameType.Network)
-                    aiPlayerTwo = gameDataService.CreateAIGame(playerTwo, game, match);
+                GameConfigCache.Instance.CacheConfig(match.MatchId, config);
+                string serializedConfig = JsonSerializer.SerializeToJSON(config);
+                IEnumerable<string> configSections = StringSplitter.SplitString(serializedConfig, 500);
+                List<ConfigSection> dbConfigSections = new List<ConfigSection>();
+                foreach(var section in configSections)
+                {
+                    dbConfigSections.Add(gameDataService.CreateConfigSection(match.MatchId, section));
+                }
 
                 gameDataService.Save();
+
+                int gameId = ConfigureGame(match.MatchId);
 
                 //Contact the central server
                 //In this case, we are just handling data validation, and game rules.
                 //We will let the server response tell us who goes first.
                 if (config.GameType == GameType.Network)
                 {
-                    using (ICommunicationChannel serverCommunicationChannel = new CentralServerCommunicationChannel())
+                    this.PlayerChallenge(this, new ChallengeEventArgs()
                     {
-                        //Call the server, but don't wait for the response, we will deal with the response when it comes back.
-                        serverCommunicationChannel.ChallengePlayer(playerOne.PlayerName, playerTwo.PlayerName, game.GameId);
-                    }
+                        MatchId = match.MatchId,
+                        PlayerOneId = playerOne.PlayerId,
+                        PlayerTwoId = playerTwo.PlayerId
+                    });
                 }
-                //If the game isn't network mode, we default to making the creating player go first
-                else
+
+                return match.MatchId;
+            }
+        }
+
+        public void AcceptChallenge(int playerId, int matchId)
+        {
+            using (IGameDataService gameDataService = new GameDataService())
+            {
+                Match match = gameDataService.GetMatch(matchId, null);
+
+                if(match.EndDate != null)
                 {
-                    gameDataService.SetPlayerTurn(game.GameId, playerOne.PlayerId);
+                    gameDataService.Attach(match);
+
+                    if (match.PlayerOneId == playerId)
+                        match.PlayerOneAccepted = true;
+                    else if (match.PlayerTwoId == playerId)
+                        match.PlayerTwoAccepted = true;
+
+                    if (playerId == match.PlayerOneId || playerId == match.PlayerTwoId)
+                        match.StateDate = DateTime.Now;
+
                     gameDataService.Save();
                 }
+            }
+        }
+
+        public void CancelChallenge(int matchId)
+        {
+            using (IGameDataService gameDataService = new GameDataService())
+            {
+                Match match = gameDataService.GetMatch(matchId, null);
+                gameDataService.Attach(match);
+                match.EndDate = DateTime.Now;
+                match.StateDate = match.EndDate.Value;
+                gameDataService.Save();
+            }
+        }
+
+        ///// <summary>
+        ///// Set up a new game between two players. Will return the id of the created game.
+        ///// </summary>
+        ///// <param name="config">The parameters necessary to set up the game.</param>
+        ///// <returns></returns>
+        //public int ConfigureGame(GameConfiguration config)
+        //{
+        //    return ConfigureGame(config, null, true, true);
+        //}
+
+        public int ConfigureGame(int matchId)
+        {
+            using (IGameDataService gameDataService = new GameDataService())
+            {
+                //Create a game, as well as a match in case the players play multiple games in a row.
+                Models.Match match = gameDataService.GetMatch(matchId, null);
+
+                if (match == null)
+                    throw new InvalidOperationException("A match is required for game play.");
+
+                Models.Player playerOne = gameDataService.GetPlayer(match.PlayerOneId);
+                Models.Player playerTwo = gameDataService.GetPlayer(match.PlayerTwoId);
+
+                Models.Game game = gameDataService.CreateGame(playerOne, playerTwo, match);
+                GameConfiguration config = GameConfigCache.Instance.GetConfig(matchId);
+
+                //Make an entry in the table for AI to track the game.
+                Models.AIGame aiPlayerOne;
+                if (config.PlayerOne.PlayerType == PlayerType.AI)
+                    aiPlayerOne = gameDataService.CreateAIGame(playerOne, game, match);
+
+                //We only want to be responsible for managing local AIs.
+                //If it's networked, don't record it.
+                Models.AIGame aiPlayerTwo;
+                if (config.PlayerTwo.PlayerType == PlayerType.AI && config.GameType != GameType.Network)
+                    aiPlayerTwo = gameDataService.CreateAIGame(playerTwo, game, match);
+
+                gameDataService.Attach(match);
+                match.CurrentGameId = game.GameId;
+                match.StateDate = game.StateDate;
+
+                gameDataService.Save();
+
+                ////If the game isn't network mode, we default to making the creating player go first
+                //if(config.GameType != GameType.Network)
+                //{
+                //    gameDataService.SetPlayerTurn(game.GameId, playerOne.PlayerId);
+                //}
+
+                //gameDataService.Save();
 
                 return game.GameId;
             }
@@ -115,6 +211,15 @@ namespace TicTacTotalDomination.Util.Games
             {
                 Game game = gameDataService.GetGame(gameId);
                 return game.StateDate.ToString("yyyyMMddHHmmss") != stateDateString;
+            }
+        }
+
+        public bool IsMatchStateChanged(int matchId, string stateDateString)
+        {
+            using (IGameDataService gameDataService = new GameDataService())
+            {
+                Match match = gameDataService.GetMatch(matchId, null);
+                return match.StateDate.ToString("yyyyMMddHHmmss") != stateDateString;
             }
         }
 
@@ -147,19 +252,72 @@ namespace TicTacTotalDomination.Util.Games
                     foreach (var move in moves)
                     {
                         if (move.IsSettingPiece)
-                            result.GameBoard[move.X][move.y] = move.PlayerId;
+                            result.GameBoard[move.X][move.y] = move.PlayerId == playerId ? playerId : -1;
                         else
                             result.GameBoard[move.X][move.y] = null;
                     }
 
+                    if (result.GameBoard.Sum(row => row.Count(cell => cell == null)) <= 1 && result.Mode == PlayMode.Playing)
+                        result.Mode = PlayMode.DeathMatch;
+
                     result.StateDateString = game.StateDate.ToString("yyyyMMddHHmmss");
                     result.YourTurn = game.CurrentPlayerId == playerId;
+
+                    if (game.WinningPlayerId != null)
+                    {
+                        Player winner = gameDataService.GetPlayer(game.WinningPlayerId.Value);
+                        result.YouWon = playerId == game.WinningPlayerId;
+                        result.WinningPlayerName = winner.PlayerName;
+                    }
                 }
             }
             return result;
         }
 
+        public MatchState GetMatchState(int matchId, int playerId)
+        {
+            MatchState result = null;
+
+            using (IGameDataService gameDataServcie = new GameDataService())
+            {
+                Match match = gameDataServcie.GetMatch(matchId, null);
+
+                if (match != null)
+                {
+                    result = new MatchState();
+                    result.MatchId = matchId;
+                    result.PlayerId = playerId;
+                    result.CurrentGameId = match.CurrentGameId;
+
+                    if ((match.PlayerOneAccepted == null || match.PlayerTwoAccepted == null) && match.WonDate == null && match.EndDate == null)
+                        result.Mode = PlayMode.None;
+                    else if (match.WonDate == null && match.EndDate == null)
+                        result.Mode = PlayMode.Playing;
+                    else if (match.WonDate != null)
+                        result.Mode = PlayMode.Won;
+                    else
+                        result.Mode = PlayMode.Ended;
+
+                    result.StateDateString = match.StateDate.ToString("yyyyMMddHHmmss");
+
+                    if (match.WinningPlayerId != null)
+                    {
+                        Player winner = gameDataServcie.GetPlayer(match.WinningPlayerId.Value);
+                        result.YouWon = playerId == match.WinningPlayerId;
+                        result.WinningPlayerName = winner.PlayerName;
+                    }
+                }
+            }
+
+            return result;
+        }
+
         public MoveResult Move(Move move)
+        {
+            return this.Move(move, true);
+        }
+
+        public MoveResult Move(Move move, bool raiseEvent)
         {
             MoveResult validationResult = this.ValidateMove(move);
             if (validationResult != MoveResult.Valid)
@@ -170,6 +328,22 @@ namespace TicTacTotalDomination.Util.Games
                 gameDataService.Move(move.GameId, move.PlayerId, move.OriginX, move.OriginY, move.X, move.Y);
                 gameDataService.SwapPlayerTurn(move.GameId);
                 gameDataService.Save();
+
+                if (validationResult == MoveResult.Valid && raiseEvent)
+                {
+                    Game game = gameDataService.GetGame(move.GameId);
+                    GameConfiguration config = GameConfigCache.Instance.GetConfig(game.MatchId);
+                    if(config.GameType == GameType.Network)
+                        this.PlayerMove(this, new MoveEventArgs()
+                            {
+                                MatchId = game.MatchId,
+                                PlayerId = move.PlayerId,
+                                OriginX = move.OriginX,
+                                OriginY = move.OriginY,
+                                X = move.X,
+                                Y = move.Y
+                            });
+                }
             }
 
             return validationResult;
@@ -196,8 +370,7 @@ namespace TicTacTotalDomination.Util.Games
                     }
                 }
 
-                if ((move.X == null || move.Y == null)
-                    || (move.X < 0 || move.X > 2)
+                if ((move.X < 0 || move.X > 2)
                     || (move.Y < 0 || move.Y > 2)
                     || (state.GameBoard[move.X][move.Y] != null))
                 {

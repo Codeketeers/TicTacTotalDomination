@@ -9,6 +9,8 @@ namespace TicTacTotalDomination.Util.Games
 
     public class GameState
     {
+        public int GameId { get; set; }
+        public int PlayerId { get; set; }
         public PlayMode Mode { get; set; }
         /// <summary>
         /// Two dimensional array representing the game board.
@@ -17,5 +19,7 @@ namespace TicTacTotalDomination.Util.Games
         public int?[][] GameBoard { get; set; }
         public bool YourTurn { get; set; }
         public string StateDateString { get; set; }
+        public bool YouWon { get; set; }
+        public string WinningPlayerName { get; set; }
     }
 }

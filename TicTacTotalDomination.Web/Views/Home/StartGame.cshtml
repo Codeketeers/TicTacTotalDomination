@@ -1,0 +1,127 @@
+﻿@model TicTacTotalDomination.Web.Models.StartGameViewModel
+@using TicTacTotalDomination.Web.Helpers;
+
+@{
+    ViewBag.Title = "Game Setup";
+    Html.SetActivePage("StartGame");
+}
+
+@section TailScripts
+{
+    @if(false)
+    {
+        <script src="../../Scripts/JQuery.js"></script>   
+    }
+    <script type="text/javascript">
+        var step = 0;
+
+        function ShowProperStep() {
+            //Hide all steps.
+            $('div[data-step]').hide();
+            //Show the next step.
+            $('div[data-step=' + step + ']').show();
+        }
+
+        $('document').ready(function () {
+            step = 1;
+
+            ShowProperStep();
+
+            $('#btnNext').click(function () {
+                if (step < 3) {
+                    step++;
+
+                    ShowProperStep();
+
+                    if (step == 3) {
+                        $('#btnNext').hide();
+                        $('#btnStart').show();
+                    }
+                }
+            });
+
+            $('#btnStart').click(function () {
+                $('div[data-step]').show();
+            });
+        });
+    </script>
+}
+
+@using (Html.BeginForm("StartGame", "Home", FormMethod.Post))
+{ 
+        <div class="row" data-step="1">
+            <div class="span12">
+                <fieldset>
+                    <legend>Enter Player Name</legend>
+
+                    <div class="form-horizontal">
+                        <div class="control-group">
+                            <label class="control-label" for="txtPlayerOne">Enter user ID:</label>
+                            <div class="controls">
+                                @Html.TextBoxFor(model => model.Config.PlayerOne.Name, new { id = "txtPlayerOne" })
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            
+                <fieldset>
+                    <legend>Versus Select</legend>
+
+                    <div class="form-horizontal">
+                        @for (int i = 0; i < Model.VersusOptions.Count; i++)
+                        { 
+                            <div class="control-group">
+                                <div class="controls">
+                                    <label class="radio">
+                                        @Html.RadioButtonFor(model => model.SelectedVersus, Model.VersusOptions[i].Value)
+                                        @Model.VersusOptions[i].Text
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+        <div class="row" data-step="2">
+            <div class="span12">
+                <fieldset>
+                    <legend>Choose Connection Type</legend>
+
+                    <div class="form-horizontal">
+                        @for (int i = 0; i < Model.GameTypes.Count; i++)
+                        { 
+                            <div class="control-group">
+                                <div class="controls">
+                                    <label class="radio">
+                                        @Html.RadioButtonFor(model => model.Config.GameType, Model.GameTypes[i].Value)
+                                        @Model.GameTypes[i].Text
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+
+        <div class="row" data-step="3">
+            <div class="span12">
+                <fieldset>
+                    <legend>Enter Opponent Name</legend>
+
+                    <div class="form-horizontal">
+                        <div class="control-group">
+                            <label class="control-label" for="txtPlayerTwo">Enter opponent ID:</label>
+                            <div class="controls">
+                                @Html.TextBoxFor(model => model.Config.PlayerTwo.Name, new { id = "txtPlayerTwo" })
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+
+        <input id="btnNext" class="btn" type="button" value="Next" />
+        <input id="btnStart" class="btn btn-success" type="submit" value="Begin Game" style="display:none;" />
+}

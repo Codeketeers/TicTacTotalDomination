@@ -7,8 +7,28 @@
     <script src="@Url.Content("~/Scripts/jQuery.js")" type="text/javascript"></script>
 
     <script type="text/javascript">
+        function AttemptGetNotifications() {
+            if ('@HttpContext.Current.Session["playerName"]' != '') {
+                var gameId = $('#hdnGameId').val();
+
+                $.ajax({
+                    url: '@Url.RouteUrl("API Default", new { controller = "Game", Action = "GetNotification"})'
+                    , datatype: 'json'
+                    , data: {
+                        playerId: '@HttpContext.Current.Session["playerId"]'
+                        , gameId: gameId
+                    }
+                    , success: function (data) {
+                        debugger;
+                    }
+                });
+            }
+        }
+
         $('document').ready(function () {
             $.ajaxSetup({ cache: false }); //This line is important if you make AJAX calls that have the same inputs on a regular basis.
+
+            window.setInterval(AttemptGetNotifications, 500);
         });
     </script>
 
@@ -20,14 +40,24 @@
     <div class="container">
         <div class="navbar">
             <div class="navbar-inner">
-                <a class="brand" href="#">Tic Tac Total Domination</a>
+                <div class="container">
+                <a class="brand" href="@Url.Action("Index", "Home")"><img alt="TOTAL-DOMINATION" src="@Url.Content("~/Content/Images/total-domination-into.png")" style="height:40px;" /></a>
 
                 @if (HttpContext.Current.Session["playerName"] != null)
                 { 
-                <div class="pull-right">
-                    Welcome - @HttpContext.Current.Session["PlayerName"]
-                </div>
+                    <div class="pull-right" style="margin-top:20px">
+                        Welcome - @HttpContext.Current.Session["PlayerName"]
+                    </div>
                 }
+                else
+                {
+                    using (Html.BeginForm("SignIn", "Home", FormMethod.Post, new { @class = "form-inline pull-right", style = "margin-top:10px;margin-botton:0px;" }))
+                    { 
+                      <input type="text" class="input-small" placeholder="Player Name" name="playerName" />
+                      <button type="submit" class="btn">Sign In</button>
+                    }
+                }
+                    </div>
             </div>
         </div>
         

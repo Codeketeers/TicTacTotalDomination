@@ -7,13 +7,11 @@ namespace TicTacTotalDomination.Util.Games
 {
     public class Notification
     {
-        public List<NotificationGame> Notifications { get; set; }
+        public List<NotificationMatch> Notifications { get; set; }
 
-        public class NotificationGame
+        public class NotificationMatch
         {
-            public int GameId { get; set; }
-            public bool NewGame { get; set; }
-            public bool MyTurn { get; set; }
+            public int MatchId { get; set; }
             public string OpponentName { get; set; }
         }
     }

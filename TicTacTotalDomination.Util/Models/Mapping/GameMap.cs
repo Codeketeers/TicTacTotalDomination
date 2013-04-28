@@ -16,7 +16,9 @@ namespace TicTacTotalDomination.Util.Models.Mapping
             this.Property(t => t.GameId).HasColumnName("GameId");
             this.Property(t => t.MatchId).HasColumnName("MatchId");
             this.Property(t => t.PlayerOneId).HasColumnName("PlayerOneId");
+            this.Property(t => t.PlayerOneAccepted).HasColumnName("PlayerOneAccepted");
             this.Property(t => t.PlayerTwoId).HasColumnName("PlayerTwoId");
+            this.Property(t => t.PlayerTwoAccepted).HasColumnName("PlayerTwoAccepted");
             this.Property(t => t.WinningPlayerId).HasColumnName("WinningPlayerId");
             this.Property(t => t.CurrentPlayerId).HasColumnName("CurrentPlayerId");
             this.Property(t => t.StateDate).HasColumnName("StateDate");
@@ -28,7 +30,7 @@ namespace TicTacTotalDomination.Util.Models.Mapping
             this.HasOptional(t => t.Player)
                 .WithMany(t => t.Games)
                 .HasForeignKey(d => d.CurrentPlayerId);
-            this.HasOptional(t => t.Match)
+            this.HasRequired(t => t.Match)
                 .WithMany(t => t.Games)
                 .HasForeignKey(d => d.MatchId);
             this.HasRequired(t => t.Player1)

@@ -1,0 +1,85 @@
+﻿@using TicTacTotalDomination.Web.Sessions;
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>@ViewBag.Title</title>
+    <link href="@Url.Content("~/Content/Site.css")" rel="stylesheet" type="text/css" />
+    <link href="@Url.Content("~/Content/bootstrap.min.css")" rel="stylesheet" type="text/css" />
+    <script src="@Url.Content("~/Scripts/jQuery.js")" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        function AttemptGetNotifications() {
+            if ('@SessionManager.Instance.IsPlayerLoggedIn' != 'False') {
+                var gameId = $('#hdnGameId').val();
+
+                $.ajax({
+                    url: '@Url.HttpRouteUrl("APIDefault", new { Action = "GetNotification"})'
+                    , datatype: 'json'
+                    , data: {
+                        playerId: '@SessionManager.Instance.PlayerId'
+                        , matchId: '@SessionManager.Instance.MatchId'
+                    }
+                    , success: function (data) {
+                        if (data.Notifications.length > 0) {
+                            debugger;
+                        }
+                    }
+                });
+            }
+        }
+
+        $('document').ready(function () {
+            $.ajaxSetup({ cache: false }); //This line is important if you make AJAX calls that have the same inputs on a regular basis.
+
+            window.setInterval(AttemptGetNotifications, 500);
+        });
+    </script>
+
+    @RenderSection("HeadScripts", false)
+</head>
+
+<body>
+    <input type="hidden" id="hdnMetadata" />
+    <div class="container">
+        <div class="navbar">
+            <div class="navbar-inner">
+                <div class="container">
+                <a class="brand" href="@Url.Action("Index", "Home")" style="padding-top:0;padding-bottom:0;"><img alt="TOTAL-DOMINATION" src="@Url.Content("~/Content/Images/total-domination-into.png")" style="height:40px;" /></a>
+                <ul class="nav"@* style="margin-top:10px;"*@>
+                  <li @(ViewBag.Page == "Home" ? "class=active" : "")><a href="@Url.Action("Index", "Home", null)">Home</a></li>
+                  <li @(ViewBag.Page == "StartGame" ? "class=active" : "")><a href="@Url.Action("StartGame", "Home", null)">Play</a></li>
+                  <li @(ViewBag.Page == "GamePlay" ? "class=active" : "")><a href="#">Game</a></li>
+                </ul>
+                    
+                @if (SessionManager.Instance.IsPlayerLoggedIn)
+                { 
+                    <div class="pull-right" style="margin-top:10px">
+                        Welcome - @SessionManager.Instance.PlayerName
+                    </div>
+                }
+                else
+                {
+                    using (Html.BeginForm("SignIn", "Home", null, FormMethod.Post, new { @class = "form-inline pull-right", style = "margin-top:0px;margin-bottom:0px;" }))
+                    { 
+                      <input type="text" class="input-small" placeholder="Player Name" name="playerName" />
+                      <button type="submit" class="btn">Sign In</button>
+                    }
+                }
+
+                    <div class="pull-right" style="margin-right:10px;">
+                        <input type="button" class="btn" value="0" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        @RenderBody()
+
+        <div class="navbar navbar-fixed-bottom">
+            <p>&copy; Codeketeers 2013</p>
+        </div>
+    </div>
+    @RenderSection("TailScripts", false)
+</body>
+</html>

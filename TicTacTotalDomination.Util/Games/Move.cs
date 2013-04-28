@@ -9,6 +9,12 @@ namespace TicTacTotalDomination.Util.Games
 
     public class Move
     {
+        public Move()
+        {
+            this.X = -1;
+            this.Y = -1;
+        }
+
         public int GameId { get; set; }
         public int PlayerId { get; set; }
         public int? OriginX { get; set; }
