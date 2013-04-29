@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Timers;
 using TicTacTotalDomination.Util.DataServices;
+using TicTacTotalDomination.Util.Games;
 using TicTacTotalDomination.Util.Models;
 
 namespace TicTacTotalDomination.Util.AI
@@ -55,8 +56,34 @@ namespace TicTacTotalDomination.Util.AI
         void aiWorker_DoWork(object sender, DoWorkEventArgs e)
         {
             AIAttentionRequiredResult aiGameAttentionRequired = (AIAttentionRequiredResult)e.Argument;
-            //TODO:
-            //This is where we need to get game state, verify the move is require, and notify the AI.
+            GameState state = TicTacToeHost.Instance.GetGameState(aiGameAttentionRequired.GameId, aiGameAttentionRequired.PlayerId);
+            int[,] aiBoard = new int[3, 3];
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    aiBoard[i, j] = state.GameBoard[i][j] == null ? 0 : state.GameBoard[i][j].Value;
+                }
+            }
+            GameBoard ai = new GameBoard(aiBoard);
+            Move aiMove = ai.GetMove(1);
+            Games.Move gameMove = new Games.Move();
+            gameMove.GameId = aiGameAttentionRequired.GameId;
+            gameMove.PlayerId = aiGameAttentionRequired.PlayerId;
+            gameMove.OriginX = aiMove.OriginX;
+            gameMove.OriginY = aiMove.OriginY;
+            gameMove.X = aiMove.X;
+            gameMove.Y = aiMove.Y;
+
+            TicTacToeHost.Instance.Move(gameMove);
+
+            using (IGameDataService gameDataService = new GameDataService())
+            {
+                AIGame aiGame = gameDataService.GetAIGame(aiGameAttentionRequired.GameId);
+                gameDataService.Attach(aiGame);
+                aiGame.EvaluatingMove = false;
+                gameDataService.Save();
+            }
         }
     }
 }

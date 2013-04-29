@@ -11,6 +11,7 @@ namespace TicTacTotalDomination.Util.Games
         public int PlayerId { get; set; }
         public int? CurrentGameId { get; set; }
         public PlayMode Mode { get; set; }
+        public string ModeString { get { return Mode.ToString(); } }
         public string StateDateString { get; set; }
         public bool YouWon { get; set; }
         public string WinningPlayerName { get; set; }

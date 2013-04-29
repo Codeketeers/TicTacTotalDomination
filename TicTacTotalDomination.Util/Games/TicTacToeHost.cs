@@ -76,7 +76,6 @@ namespace TicTacTotalDomination.Util.Games
                 Models.Player playerOne = gameDataService.GetOrCreatePlayer(config.PlayerOne.Name);
                 Models.Player playerTwo = gameDataService.GetOrCreatePlayer(config.PlayerTwo.Name);
                 Models.Match match = gameDataService.CreateMatch(playerOne, playerTwo);
-                match.PlayerOneAccepted = true;
                 match.StateDate = DateTime.Now;
 
                 GameConfigCache.Instance.CacheConfig(match.MatchId, config);
@@ -87,6 +86,9 @@ namespace TicTacTotalDomination.Util.Games
                 {
                     dbConfigSections.Add(gameDataService.CreateConfigSection(match.MatchId, section));
                 }
+
+                if (config.PlayerTwo.PlayerType == PlayerType.AI && config.GameType == GameType.Local)
+                    match.PlayerTwoAccepted = true;
 
                 gameDataService.Save();
 
@@ -111,21 +113,44 @@ namespace TicTacTotalDomination.Util.Games
 
         public void AcceptChallenge(int playerId, int matchId)
         {
+            UpdateChallengeState(playerId, matchId, true);
+        }
+
+        public void DeclineChallenge(int playerId, int matchId)
+        {
+            UpdateChallengeState(playerId, matchId, false);
+        }
+
+        private void UpdateChallengeState(int playerId, int matchId, bool? state)
+        {
             using (IGameDataService gameDataService = new GameDataService())
             {
                 Match match = gameDataService.GetMatch(matchId, null);
+                GameConfiguration config = GameConfigCache.Instance.GetConfig(matchId);
 
-                if(match.EndDate != null)
+                if (match.EndDate == null)
                 {
                     gameDataService.Attach(match);
 
                     if (match.PlayerOneId == playerId)
-                        match.PlayerOneAccepted = true;
+                        match.PlayerOneAccepted = state;
                     else if (match.PlayerTwoId == playerId)
-                        match.PlayerTwoAccepted = true;
+                        match.PlayerTwoAccepted = state;
 
                     if (playerId == match.PlayerOneId || playerId == match.PlayerTwoId)
+                    {
                         match.StateDate = DateTime.Now;
+                        if (match.PlayerOneAccepted == false && match.PlayerTwoAccepted == false)
+                        {
+                            match.EndDate = match.StateDate;
+                        }
+                        else if (match.PlayerOneAccepted == true 
+                            && match.PlayerTwoAccepted == true
+                            && config.GameType != GameType.Network)
+                        {
+                            gameDataService.SetPlayerTurn(match.CurrentGameId.Value, match.PlayerOneId);
+                        }
+                    }
 
                     gameDataService.Save();
                 }
@@ -180,6 +205,7 @@ namespace TicTacTotalDomination.Util.Games
                 Models.AIGame aiPlayerTwo;
                 if (config.PlayerTwo.PlayerType == PlayerType.AI && config.GameType != GameType.Network)
                     aiPlayerTwo = gameDataService.CreateAIGame(playerTwo, game, match);
+
 
                 gameDataService.Attach(match);
                 match.CurrentGameId = game.GameId;
@@ -252,12 +278,12 @@ namespace TicTacTotalDomination.Util.Games
                     foreach (var move in moves)
                     {
                         if (move.IsSettingPiece)
-                            result.GameBoard[move.X][move.y] = move.PlayerId == playerId ? playerId : -1;
+                            result.GameBoard[move.X][move.y] = move.PlayerId == playerId ? 1 : -1;
                         else
                             result.GameBoard[move.X][move.y] = null;
                     }
 
-                    if (result.GameBoard.Sum(row => row.Count(cell => cell == null)) <= 1 && result.Mode == PlayMode.Playing)
+                    if (result.GameBoard.Sum(row => row.Count(cell => cell == null || cell == 0)) <= 1 && result.Mode == PlayMode.Playing)
                         result.Mode = PlayMode.DeathMatch;
 
                     result.StateDateString = game.StateDate.ToString("yyyyMMddHHmmss");
@@ -326,7 +352,6 @@ namespace TicTacTotalDomination.Util.Games
             using (IGameDataService gameDataService = new GameDataService())
             {
                 gameDataService.Move(move.GameId, move.PlayerId, move.OriginX, move.OriginY, move.X, move.Y);
-                gameDataService.SwapPlayerTurn(move.GameId);
                 gameDataService.Save();
 
                 if (validationResult == MoveResult.Valid && raiseEvent)
@@ -346,6 +371,8 @@ namespace TicTacTotalDomination.Util.Games
                 }
             }
 
+            this.UpdateGame(move.GameId);
+
             return validationResult;
         }
 
@@ -364,7 +391,7 @@ namespace TicTacTotalDomination.Util.Games
                         || (move.OriginX == null || move.OriginY == null)
                         || (move.OriginX < 0 || move.OriginX > 2)
                         || (move.OriginY < 0 || move.OriginY > 2)
-                        || (state.GameBoard[move.OriginX.Value][move.OriginY.Value] != move.PlayerId))
+                        || (state.GameBoard[move.OriginX.Value][move.OriginY.Value] != 1))
                     {
                         return MoveResult.InvalidOrigin;
                     }
@@ -382,6 +409,85 @@ namespace TicTacTotalDomination.Util.Games
 
             //If there isn't a rule to catch by now, we just need to fail.
             return MoveResult.Failed;
+        }
+
+        private void UpdateGame(int gameId)
+        {
+            using (IGameDataService gameDataService = new GameDataService())
+            {
+                Game game = gameDataService.GetGame(gameId);
+                GameState state = this.GetGameState(gameId, game.PlayerOneId);
+                int gameWon = this.IsWon(state.GameBoard);
+                if (gameWon == 1 || gameWon == -1)
+                {
+                    if (gameWon == 1)
+                        gameDataService.EndGame(gameId, game.PlayerOneId);
+                    else if (gameWon == -1)
+                        gameDataService.EndGame(gameId, game.PlayerTwoId);
+
+                    gameDataService.Save();
+                }
+            }
+            using (IGameDataService gameDataService = new GameDataService())
+            {
+                gameDataService.SwapPlayerTurn(gameId);
+                gameDataService.Save();
+            }
+        }
+
+        public int IsWon(int?[][]board)
+        {
+            int result = IsWon(board, 1);
+            if (result == 0)
+                result = IsWon(board, -1);
+
+            return result;
+        }
+
+        public int IsWon(int?[][]Board, int player)
+        {
+            if (Board[0][0] == player)
+            {
+                if (Board[0][0] == Board[0][1] &&
+                        Board[0][1] == Board[0][2])
+                    return player;
+
+                if (Board[0][0] == Board[1][0] &&
+                        Board[1][0] == Board[2][0])
+                    return player;
+            }
+
+            if (Board[2][2] == player)
+            {
+                if (Board[2][0] == Board[2][1] &&
+                        Board[2][1] == Board[2][2])
+                    return player;
+
+                if (Board[0][2] == Board[1][2] &&
+                        Board[1][2] == Board[2][2])
+                    return player;
+            }
+
+            if (Board[1][1] == player)
+            {
+                if (Board[0][1] == Board[1][1] &&
+                        Board[1][1] == Board[2][1])
+                    return player;
+
+                if (Board[1][0] == Board[1][1] &&
+                        Board[1][1] == Board[1][2])
+                    return player;
+
+                if (Board[0][0] == Board[1][1] &&
+                        Board[1][1] == Board[2][2])
+                    return player;
+
+                if (Board[0][2] == Board[1][1] &&
+                        Board[1][1] == Board[2][0])
+                    return player;
+            }
+
+            return 0;
         }
     }
 }

@@ -25,7 +25,7 @@ namespace TicTacTotalDomination.Util.DataRepositories
         AIGame CreateAIGame();
         ConfigSection CreateConfigSection();
 
-        void Attach(object entity);
+        void Attach<T>(T entity) where T : class;
         void Delete(object entity);
         void Save();
     }

@@ -45,7 +45,24 @@ namespace TicTacTotalDomination.Web.Controllers
         public ActionResult StartGame(StartGameViewModel model)
         {
             model.StartGame();
-            return View("GamePlay");
+            return View("PlayGame");
+        }
+
+        [HttpGet]
+        public ActionResult PlayGame(int matchId, string playerName)
+        {
+            if (!SessionManager.Instance.IsPlayerLoggedIn || SessionManager.Instance.PlayerName != playerName)
+            {
+                GameController gameApiController = new GameController();
+                Player player = gameApiController.SignIn(playerName);
+                SessionManager.Instance.PlayerName = playerName;
+                SessionManager.Instance.PlayerId = player.PlayerId;
+                SessionManager.Instance.IsPlayerLoggedIn = true;
+            }
+
+            SessionManager.Instance.MatchId = matchId;
+
+            return View();
         }
     }
 }

@@ -195,6 +195,10 @@ namespace TicTacTotalDomination.Util.DataServices
 
                 this.repository.Attach(game);
                 game.StateDate = moveDateTime;
+                //if (game.CurrentPlayerId == game.PlayerOneId)
+                //    game.CurrentPlayerId = game.PlayerTwoId;
+                //else if (game.CurrentPlayerId == game.PlayerTwoId)
+                //    game.CurrentPlayerId = game.PlayerOneId;
 
                 this.repository.Save();
             }
@@ -228,16 +232,20 @@ namespace TicTacTotalDomination.Util.DataServices
         void IGameDataService.EndGame(int gameId, int? winningPlayer)
         {
             Game game = (this as IGameDataService).GetGame(gameId);
+            Match match = (this as IGameDataService).GetMatch(null, gameId);
             if (game != null)
             {
                 DateTime endDate = DateTime.Now;
                 this.repository.Attach(game);
+                this.repository.Attach(match);
                 game.EndDate = endDate;
+                match.StateDate = endDate;
 
                 if (winningPlayer != null && (winningPlayer == game.PlayerOneId || winningPlayer == game.PlayerTwoId))
                 {
                     game.WinningPlayerId = winningPlayer;
                     game.WonDate = endDate;
+                    game.StateDate = endDate;
                 }
             }
         }

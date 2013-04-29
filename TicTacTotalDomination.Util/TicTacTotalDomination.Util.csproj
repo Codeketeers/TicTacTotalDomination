@@ -52,6 +52,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AI\AIManager.cs" />
+    <Compile Include="AI\GameBoard.cs" />
+    <Compile Include="AI\Move.cs" />
     <Compile Include="Caching\GameConfigCache.cs" />
     <Compile Include="DataRepositories\DominationRepository.cs" />
     <Compile Include="DataRepositories\IDominationRepository.cs" />

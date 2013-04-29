@@ -12,6 +12,7 @@ namespace TicTacTotalDomination.Util.Games
         public int GameId { get; set; }
         public int PlayerId { get; set; }
         public PlayMode Mode { get; set; }
+        public string ModeString { get { return Mode.ToString(); } }
         /// <summary>
         /// Two dimensional array representing the game board.
         /// Populated with the id of the player occupying the space, if any.

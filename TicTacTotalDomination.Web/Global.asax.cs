@@ -5,6 +5,7 @@ using System.Web;
 using System.Web.Http;
 using System.Web.Mvc;
 using System.Web.Routing;
+using TicTacTotalDomination.Util.AI;
 using TicTacTotalDomination.Util.Caching;
 using TicTacTotalDomination.Util.Games;
 using TicTacTotalDomination.Util.NetworkCommunication;
@@ -26,6 +27,7 @@ namespace TicTacTotalDomination.Web
 
             GameConfigCache.Instance.ApplyCacheMechanism(new GameConfigWebCache());
             CentralServerCommunicationChannel.Instance.StartWatchingForGameEvents();
+            AIManager.Instance.StartMonitoring();
         }
 
     }

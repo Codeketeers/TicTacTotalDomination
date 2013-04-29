@@ -143,6 +143,8 @@
     <Content Include="Content\Images\Blank.jpg" />
     <Content Include="Content\Images\gameplay.png" />
     <Content Include="Content\Images\O.jpg" />
+    <Content Include="Content\Images\OriginO.jpg" />
+    <Content Include="Content\Images\OriginX.jpg" />
     <Content Include="Content\Images\total-domination-into.png" />
     <Content Include="Content\Images\win-without-background.png" />
     <Content Include="Content\Images\X.jpg" />
@@ -203,6 +205,8 @@
     <Content Include="Content\themes\base\minified\jquery.ui.theme.min.css" />
     <Content Include="Global.asax" />
     <None Include="Scripts\jquery-1.7.1.intellisense.js" />
+    <Content Include="Scripts\bootstrap.js" />
+    <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\jquery-1.7.1.js" />
     <Content Include="Scripts\jquery-1.7.1.min.js" />
     <Content Include="Scripts\jquery-ui-1.8.20.js" />
@@ -231,7 +235,7 @@
     </Content>
     <Content Include="Views\Web.config" />
     <Content Include="Views\Home\StartGame.cshtml" />
-    <Content Include="Views\Home\GamePlay.cshtml" />
+    <Content Include="Views\Home\PlayGame.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

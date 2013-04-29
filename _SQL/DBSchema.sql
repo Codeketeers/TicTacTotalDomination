@@ -101,6 +101,22 @@ create table dbo.CentralServerSession(
 )
 go
 
+--User Creation
+if not exists (select name from master.sys.server_principals where name = 'TicTacUser')
+begin
+	use master
+	create login TicTacUser with password = 'T07aLD0m1nat1oN', default_database = TicTacTotalDomination
+end
+
+if not exists (select name from TicTacTotalDomination.sys.database_principals where name = 'TicTacUser')
+begin
+	use TicTacTotalDomination
+	create user TicTacUser for login TicTacUser;
+	exec sp_addrolemember 'db_datareader', 'TicTacUser'
+	exec sp_addrolemember 'db_datawriter', 'TicTacUser'
+end
+go
+
 --Stored Procedure Creation
 create procedure dbo.sp_GetAIGamesForEvaluation
 as
@@ -123,17 +139,5 @@ begin
 end
 go
 
---User Creation
-if not exists (select name from master.sys.server_principals where name = 'TicTacUser')
-begin
-	use master
-	create login TicTacUser with password = 'T07aLD0m1nat1oN', default_database = TicTacTotalDomination
-end
-
-if not exists (select name from TicTacTotalDomination.sys.database_principals where name = 'TicTacUser')
-begin
-	use TicTacTotalDomination
-	create user TicTacUser for login TicTacUser;
-	exec sp_addrolemember 'db_datareader', 'TicTacUser'
-	exec sp_addrolemember 'db_datawriter', 'TicTacUser'
-end
+grant execute on dbo.sp_GetAIGamesForEvaluation to TicTacUser
+go

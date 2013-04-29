@@ -50,9 +50,32 @@ namespace TicTacTotalDomination.Web.Controllers
         }
 
         [HttpGet]
+        public GameState GetGameStateIfChanged(int gameId, int playerId, string stateDateString)
+        {
+            GameState result = null;
+            if (this.host.IsGameStateChaged(gameId, stateDateString))
+            {
+                result = this.host.GetGameState(gameId, playerId);
+            }
+            return result;
+        }
+
+        [HttpGet]
         public bool GetHasMatchStateChanged(int matchId, string stateDateString)
         {
             return this.host.IsMatchStateChanged(matchId, stateDateString);
+        }
+
+        [HttpGet]
+        public void AcceptMatch(int playerId, int matchId)
+        {
+            this.host.AcceptChallenge(playerId, matchId);
+        }
+
+        [HttpGet]
+        public void DeclineMatch(int playerId, int matchId)
+        {
+            this.host.DeclineChallenge(playerId, matchId);
         }
 
         [HttpGet]

@@ -1,0 +1,260 @@
+﻿@using TicTacTotalDomination.Web.Helpers;
+@using TicTacTotalDomination.Web.Sessions;
+@using TicTacTotalDomination.Util.Games;
+
+@{
+    ViewBag.Title = "Game Play";
+    Html.SetActivePage("GamePlay");
+}
+
+@section TailScripts
+{
+    <script type="text/javascript">
+        var checkMatchState = true;
+        var checkGameState = true;
+        var originSelected = false;
+        
+        var ModeDeathMatch = '@PlayMode.DeathMatch';
+        var ModeEnded = '@PlayMode.Ended';
+        var ModeNone = '@PlayMode.None';
+        var ModePlaying = '@PlayMode.Playing';
+        var ModeWon = '@PlayMode.Won';
+
+        var originX = null;
+        var originY = null;
+
+        function CheckMatchState() {
+            if (checkMatchState) {
+                var metaData = LoadGameMetaData();
+
+                $.ajax({
+                    url: '@Url.HttpRouteUrl("APIDefault", new { Action = "GetHasMatchStateChanged"})'
+                    , datatype: 'json'
+                    , data: {
+                        matchId: metaData.matchId
+                        , stateDateString: metaData.matchStateDate
+                    }
+                    , success: function (data) {
+                        if (data) {
+                            checkMatchState = false;
+
+                            GetMatchState();
+                        }
+                    }
+                });
+            }
+        }
+
+        function CheckGameState() {
+            if (checkGameState) {
+                //var metadata = LoadGameMetaData();
+
+                checkGameState = false;
+
+                GetGameState();
+                @*$.ajax({
+                    url: '@Url.HttpRouteUrl("APIDefault", new { Action = "GetHasGameStateChanged"})'
+                    , datatype: 'json'
+                    , data: {
+                        gameId: metadata.gameId
+                        , stateDateString: metadata.gameStateDate
+                    }
+                    , success: function (data) {
+                        if (data) {
+                            checkGameState = false;
+
+                            GetGameState();
+                        }
+                    }
+                });*@
+            }
+        }
+
+        function GetMatchState() {
+            var metaData = LoadGameMetaData();
+
+            $.ajax({
+                url: '@Url.HttpRouteUrl("APIDefault", new { Action = "GetMatchState"})'
+                , datatype: 'json'
+                , data: {
+                    playerId: metaData.playerId
+                    , matchId: metaData.matchId
+                }
+                , success: function (data) {
+                    var newData = LoadGameMetaData();
+                    newData.matchId = data.MatchId;
+                    newData.playerId = data.PlayerId;
+                    newData.gameId = data.CurrentGameId;
+                    newData.matchStateDate = data.StateDateString;
+                    newData.playMode = data.ModeString;
+                    newData.matchYouWon = data.YouWon;
+                    newData.matchWinningPlayerName = data.WinningPlayerName;
+
+                    SaveGameMedata(newData);
+                }
+                , complete: function () {
+                    checkMatchState = true;
+                }
+            });
+        }
+
+        function GetGameState() {
+            var metaData = LoadGameMetaData();
+
+            $.ajax({
+                url: '@Url.HttpRouteUrl("APIDefault", new { Action = "GetGameStateIfChanged"})'
+                , datatype: 'json'
+                , data: {
+                    playerId: metaData.playerId
+                    , gameId: metaData.gameId
+                    , stateDateString: metaData.gameStateDate
+                }
+                , success: function (data) {
+                    if (data != null && data != undefined) {
+                        var newData = LoadGameMetaData();
+                        newData.gameMode = data.ModeString;
+                        newData.yourTurn = data.YourTurn;
+                        newData.gameStateDate = data.StateDateString;
+                        newData.gameYouWon = data.YouWon;
+                        newData.gameWinningPlayerName = data.WinningPlayerName;
+
+                        SaveGameMedata(newData);
+                        PaintBoard(data);
+                    }
+                }
+                , complete: function () {
+                    checkGameState = true;
+                }
+            });
+        }
+
+        function PaintBoard(state) {
+            $('.cellImage').hide();
+
+            for (var r = 0; r < 3; r++) {
+                for (var c = 0; c < 3; c++) {
+                    var cell = $('.BoardCell[data-x=' + r + '][data-y=' + c + ']');
+                    if (state.GameBoard[r][c] == '1') {
+                        cell.find('.cellImage.x').first().show();
+                    }
+                    else if (state.GameBoard[r][c] == '-1') {
+                        cell.find('.cellImage.o').first().show();
+                    }
+                    else{
+                        cell.find('.cellImage.blank').first().show();
+                    }
+                }
+            }
+
+            if (state.WinningPlayerName != null && state.WinningPlayerName != undefined && state.WinningPlayerName != '') {
+                $('#GameWonContainer').removeClass('alert-error').removeClass('alert-success');
+                if (state.YouWon) {
+                    $('#GameWonContainer').addClass('alert-success');
+                }
+                else {
+                    $('#GameWonContainer').addClass('alert-error');
+                }
+
+                $('#GameWinnerName').empty().html(state.WinningPlayerName);
+                $('#GameWonContainer').show();
+            }
+            else {
+                $('#GameWonContainer').hide();
+            }
+        }
+
+        $('document').ready(function () {
+            var metaData = LoadGameMetaData();
+
+            $.ajax({
+                url: '@Url.HttpRouteUrl("APIDefault", new { Action = "AcceptMatch"})'
+                , data: {
+                    playerId: metaData.playerId
+                    , matchId: metaData.matchId
+                }
+            });
+
+            $('.BoardCell').click(function (event) {
+                var x = $(this).attr('data-x');
+                var y = $(this).attr('data-y');
+                var metaData = LoadGameMetaData();
+
+                if (metaData.yourTurn) {
+                    if (metaData.gameMode == ModeDeathMatch && originX == null && originY == null) {
+                        originX = x;
+                        originY = y;
+
+                        $('.BoardCell[data-x=' + x + '][data-y=' + y + ']').find('.cellImage').hide();
+                        $('.BoardCell[data-x=' + x + '][data-y=' + y + ']').find('.cellImage.originX').first().show();
+                    }
+                    else if (metaData.gameMode == ModePlaying || (metaData.gameMode == ModeDeathMatch && originX != null && originY != null)) {
+                        $.ajax({
+                            url: '@Url.HttpRouteUrl("APIDefault", new { Action = "Move"})'
+                            , datatype: 'json'
+                            , type: 'POST'
+                            , data: {
+                                X: x
+                                , Y: y
+                                , OriginX: originX
+                                , OriginY: originY
+                                , GameId: metaData.gameId
+                                , PlayerId: metaData.playerId
+                            }
+                            , success: function (data) {
+                                //RenderBoard(data);
+
+                                //piece = piece == 'X' ? 'Y' : 'X';
+                            }
+                            , complete: function () {
+                                originX = null;
+                                originY = null;
+                                CheckGameState();
+                            }
+                        });
+
+                        originX = null;
+                        originY = null;
+                    }
+                    else {
+                        originX = null;
+                        originY = null;
+                    }
+                }
+            });
+
+            window.setInterval(CheckMatchState, 500);
+            window.setInterval(CheckGameState, 500);
+        });
+    </script>
+}
+
+<div class="row">
+    <div class="span3 offset5" id="GameBoardContainer">
+        <div id="GameBoard" style="width:232px;height:232px;padding:0px;">
+            @*The real beauty of MVC is that we can use c# code to leverage building our views*@
+            @for (int r = 0; r < 3; r++)
+            {
+                for (int c = 0; c < 3; c++)
+                {
+                    @*There are two things to notice here.
+                        The first is that I used two C# for loops to build out the entire game board with one line of html.
+                        The second is that I can bind to more than just view model properties.
+                            Here I indicated the coordinates of each cell by binding to the fields of my for loop.
+                    *@
+                    <div class="BoardCell" data-x="@r" data-y="@c" style="width:75px;height:75px;float:left;border:1px solid black;margin:0px;padding:0px;">
+                        <img class="cellImage blank" alt="Cell" src="@Url.Content("~/Content/Images/Blank.jpg")" />
+                        <img class="cellImage o" alt="Cell" src="@Url.Content("~/Content/Images/O.jpg")" style="display:none;"/>
+                        <img class="cellImage x" alt="Cell" src="@Url.Content("~/Content/Images/X.jpg")" style="display:none;"/>
+                        <img class="cellImage originO" alt="Cell" src="@Url.Content("~/Content/Images/OriginO.jpg")" style="display:none;"/>
+                        <img class="cellImage originX" alt="Cell" src="@Url.Content("~/Content/Images/OriginX.jpg")" style="display:none;"/>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="span4 offset4 alert" id="GameWonContainer">
+        <p><span id="GameWinnerName"></span> has won the game!</p>
+    </div>
+</div>

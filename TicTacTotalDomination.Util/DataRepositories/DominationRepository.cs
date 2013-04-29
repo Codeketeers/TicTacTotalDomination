@@ -106,7 +106,7 @@ namespace TicTacTotalDomination.Util.DataRepositories
             return result;
         }
 
-        void IDominationRepository.Attach(object entity)
+        void IDominationRepository.Attach<T>(T entity)
         {
             this.Context.Entry(entity).State = System.Data.Entity.EntityState.Modified;
         }
