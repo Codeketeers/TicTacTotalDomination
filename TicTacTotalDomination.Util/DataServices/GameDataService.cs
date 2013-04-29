@@ -100,9 +100,9 @@ namespace TicTacTotalDomination.Util.DataServices
             return result;
         }
 
-        AIGame IGameDataService.GetAIGame(int gameId)
+        AIGame IGameDataService.GetAIGame(int gameId, int playerId)
         {
-            return this.repository.GetAIGames().FirstOrDefault(aiGame => aiGame.GameId == gameId);
+            return this.repository.GetAIGames().FirstOrDefault(aiGame => aiGame.GameId == gameId && aiGame.PlayerId == playerId);
         }
 
         Models.CentralServerSession IGameDataService.CreateCentralServerSession(int gameId)

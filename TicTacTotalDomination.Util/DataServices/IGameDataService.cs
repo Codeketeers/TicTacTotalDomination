@@ -18,7 +18,7 @@ namespace TicTacTotalDomination.Util.DataServices
         Match CreateMatch(Player playerOne, Player playerTwo);
         Match GetMatch(int? matchId, int? gameId);
         AIGame CreateAIGame(Player player, Game game, Match match);
-        AIGame GetAIGame(int gameId);
+        AIGame GetAIGame(int gameId, int playerId);
         CentralServerSession CreateCentralServerSession(int gameId);
         CentralServerSession GetCentralServerSession(int? sessionId, int? centralServerGameId, int? gameId);
         ConfigSection CreateConfigSection(int matchId, string contents);

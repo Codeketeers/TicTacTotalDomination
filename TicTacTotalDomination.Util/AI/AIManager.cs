@@ -75,11 +75,15 @@ namespace TicTacTotalDomination.Util.AI
             gameMove.X = aiMove.X;
             gameMove.Y = aiMove.Y;
 
-            TicTacToeHost.Instance.Move(gameMove);
+            var moveReuslt = TicTacToeHost.Instance.Move(gameMove);
+            if (moveReuslt != MoveResult.Valid)
+            {
+
+            }
 
             using (IGameDataService gameDataService = new GameDataService())
             {
-                AIGame aiGame = gameDataService.GetAIGame(aiGameAttentionRequired.GameId);
+                AIGame aiGame = gameDataService.GetAIGame(aiGameAttentionRequired.GameId, aiGameAttentionRequired.PlayerId);
                 gameDataService.Attach(aiGame);
                 aiGame.EvaluatingMove = false;
                 gameDataService.Save();

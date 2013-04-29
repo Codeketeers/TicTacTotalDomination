@@ -236,7 +236,7 @@ namespace TicTacTotalDomination.Util.Games
             using (IGameDataService gameDataService = new GameDataService())
             {
                 Game game = gameDataService.GetGame(gameId);
-                return game.StateDate.ToString("yyyyMMddHHmmss") != stateDateString;
+                return game.StateDate.ToString("yyyyMMddHHmmssfffff") != stateDateString;
             }
         }
 
@@ -245,7 +245,7 @@ namespace TicTacTotalDomination.Util.Games
             using (IGameDataService gameDataService = new GameDataService())
             {
                 Match match = gameDataService.GetMatch(matchId, null);
-                return match.StateDate.ToString("yyyyMMddHHmmss") != stateDateString;
+                return match.StateDate.ToString("yyyyMMddHHmmssfffff") != stateDateString;
             }
         }
 
@@ -286,7 +286,7 @@ namespace TicTacTotalDomination.Util.Games
                     if (result.GameBoard.Sum(row => row.Count(cell => cell == null || cell == 0)) <= 1 && result.Mode == PlayMode.Playing)
                         result.Mode = PlayMode.DeathMatch;
 
-                    result.StateDateString = game.StateDate.ToString("yyyyMMddHHmmss");
+                    result.StateDateString = game.StateDate.ToString("yyyyMMddHHmmssfffff");
                     result.YourTurn = game.CurrentPlayerId == playerId;
 
                     if (game.WinningPlayerId != null)
@@ -324,7 +324,7 @@ namespace TicTacTotalDomination.Util.Games
                     else
                         result.Mode = PlayMode.Ended;
 
-                    result.StateDateString = match.StateDate.ToString("yyyyMMddHHmmss");
+                    result.StateDateString = match.StateDate.ToString("yyyyMMddHHmmssfffff");
 
                     if (match.WinningPlayerId != null)
                     {
