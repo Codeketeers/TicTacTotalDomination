@@ -6,7 +6,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.Serialization.Json;
+using System.ServiceModel.Dispatcher;
 using System.Text;
+using System.Web;
+using System.Web.Script.Serialization;
 using TicTacTotalDomination.Util.DataServices;
 using TicTacTotalDomination.Util.Games;
 using TicTacTotalDomination.Util.Models;
@@ -57,6 +60,8 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                 requestConfig.GameId = game.GameId;
                 requestConfig.MatchId = game.MatchId;
                 requestConfig.ResponseAction = new Action<string, int>(ChallengePlayerCompleted);
+
+                this.PerformServerRequest(requestConfig);
             }
         }
 
@@ -66,10 +71,12 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
             {
                 Match match = dataService.GetMatch(matchId, null);
                 Player player = dataService.GetPlayer(match.PlayerOneId);
+                GameState state = TicTacToeHost.Instance.GetGameState(match.CurrentGameId.Value, player.PlayerId);
 
                 var requestData = new MoveRequest();
                 requestData.PlayerName = player.PlayerName;
                 requestData.GameId = -1;
+                requestData.Flags = CentralServerCommunicationChannel.GetStatus(state.Mode == PlayMode.DeathMatch ? StatusFlag.DrawMove : state.Mode == PlayMode.Won ? StatusFlag.WinningMove : StatusFlag.None);
                 requestData.X = x;
                 requestData.Y = y;
 
@@ -82,7 +89,10 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                 requestConfig.Url = string.Format("{0}/play.php", ConfigurationManager.AppSettings["CentralServerUrl"]);
                 requestConfig.RequestData = requestJSON;
                 requestConfig.GameId = match.CurrentGameId.Value;
+                requestConfig.MatchId = matchId;
                 requestConfig.ResponseAction = new Action<string, int>(PostMoveCompleted);
+
+                this.PerformServerRequest(requestConfig);
             }
         }
 
@@ -93,27 +103,18 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                 {
                     var workerConfig = (ServerRequestConfig)args.Argument;
 
-                    //TODO: Add configuration value for url.
-                    var request = (HttpWebRequest)WebRequest.Create(workerConfig.Url);
-                    request.Method = WebRequestMethods.Http.Post;
+                    //"http://centralserver.codeketeers.com/ServerPairing.php?challenge=James&from=Anthony"
+                    JavaScriptSerializer dataSerailizer = new JavaScriptSerializer();
+                    string queryString = string.Join("&", dataSerailizer.Deserialize<Dictionary<string,string>>(config.RequestData).Where(kv => !string.IsNullOrEmpty(kv.Value)).Select(kv => string.Format("{0}={1}", kv.Key, HttpUtility.UrlEncode(kv.Value != null ? kv.Value : string.Empty))));
+                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(string.Format("{0}?{1}", config.Url, queryString));
+                    request.ContentLength = 0;
 
-                    using(Stream requestStream = request.GetRequestStream())
-                    using (var requestWriter = new StreamWriter(requestStream))
+                    var httpResponse = (HttpWebResponse)request.GetResponse();
+                    using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
                     {
-                        requestWriter.Write(workerConfig);
-                        requestWriter.Flush();
-                        requestWriter.Close();
+                        var result = streamReader.ReadToEnd();
+                        workerConfig.ResponseAction(result, workerConfig.MatchId);
                     }
-
-                    string responseData = null;
-                    using (var response = (HttpWebResponse)request.GetResponse())
-                    using (Stream responseStream = response.GetResponseStream())
-                    using (var responseReader = new StreamReader(responseStream))
-                    {
-                        responseData = responseReader.ReadToEnd();
-                    }
-
-                    workerConfig.ResponseAction(responseData, workerConfig.GameId);
                 };
             worker.RunWorkerAsync(config);
         }
@@ -166,23 +167,102 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
         }
 
         #region Central Server Response Handling
-        static void ChallengePlayerCompleted(string data, int gameId)
+        static void ChallengePlayerCompleted(string data, int matchId)
         {
             var response = JsonSerializer.DeseriaizeFromJSON<ChallengeResponse>(data);
             if (string.IsNullOrEmpty(response.Error))
             {
+                Match match;
+                CentralServerSession session;
                 using (IGameDataService dataService = new GameDataService())
                 {
-                    var game = dataService.GetGame(gameId);
-                    var session = dataService.GetCentralServerSession(null, null, gameId);
+                    match = dataService.GetMatch(matchId, null);
+                    session = dataService.GetCentralServerSession(null, null, match.CurrentGameId.Value);
+
+                    dataService.Attach(session);
                     session.CentralServerGameId = response.GameId;
-                    //I'll need some of the other game logic in order to finish this call.
+                    dataService.Save();
+
+                    TicTacToeHost.Instance.AcceptChallenge(match.PlayerTwoId, match.MatchId);
+
+                    if (response.YourTurn)
+                    {
+                        dataService.SetPlayerTurn(match.CurrentGameId.Value, match.PlayerOneId);
+                        dataService.Save();
+                    }
+                    else
+                    {
+                        dataService.SetPlayerTurn(match.CurrentGameId.Value, match.PlayerTwoId);
+                        dataService.Save();
+                        TicTacToeHost.Instance.Move(new Move() { GameId = match.CurrentGameId.Value, PlayerId = match.PlayerTwoId, X = response.X, Y = response.Y }, false);
+                    }
                 }
             }
         }
 
-        static void PostMoveCompleted(string data, int gameId)
+        static void PostMoveCompleted(string data, int matchId)
         {
+            var response = JsonSerializer.DeseriaizeFromJSON<MoveResponse>(data);
+            bool newGame;
+            int gameId;
+            Match match;
+            CentralServerSession session;
+            using (IGameDataService dataService = new GameDataService())
+            {
+                match = dataService.GetMatch(matchId, null);
+                session = dataService.GetCentralServerSession(null, null, match.CurrentGameId.Value);
+
+                if (response.NewGameId != null && response.NewGameId > 0 && response.NewGameId != session.CentralServerGameId)
+                {
+                    int newGameId = TicTacToeHost.Instance.ConfigureGame(matchId);
+                    gameId = newGameId;
+                    session = dataService.CreateCentralServerSession(newGameId, response.NewGameId);
+                }
+                else
+                {
+                    gameId = match.CurrentGameId.Value;
+                }
+                dataService.Save();
+            }
+
+            if (response.X >= 0 && response.Y >= 0)
+            {
+                Move move = new Move() { GameId = gameId, PlayerId = match.PlayerTwoId };
+                GameState state = TicTacToeHost.Instance.GetGameState(gameId, match.PlayerTwoId);
+                StatusFlag flag = CentralServerCommunicationChannel.ParseStatus(response.StatusFlag);
+                if (flag == StatusFlag.DrawMove)
+                {
+                    move.OriginX = response.X;
+                    move.OriginY = response.Y;
+                    for (int x = 0; x < 3; x++)
+                    {
+                        for (int y = 0; y < 3; y++)
+                        {
+                            if (state.GameBoard[x][y] == null || state.GameBoard[x][y] == 0)
+                            {
+                                move.X = x;
+                                move.Y = y;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    move.X = response.X;
+                    move.Y = response.Y;
+                }
+
+                TicTacToeHost.Instance.Move(move, false);
+            }
+            else if (response.YourTurn)
+            {
+                using (IGameDataService dataService = new GameDataService())
+                {
+                    dataService.SetPlayerTurn(gameId, match.PlayerOneId);
+                    dataService.Save();
+                }
+            }
+
             //var response = JsonSerializer.DeseriaizeFromJSON<MoveResponse>(data);
             //if (string.IsNullOrEmpty(response.Error))
             //{

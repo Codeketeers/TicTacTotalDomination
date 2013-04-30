@@ -349,29 +349,30 @@ namespace TicTacTotalDomination.Util.Games
             if (validationResult != MoveResult.Valid)
                 return validationResult;
 
+            Match match;
             using (IGameDataService gameDataService = new GameDataService())
             {
+                match = gameDataService.GetMatch(null, move.GameId);
                 gameDataService.Move(move.GameId, move.PlayerId, move.OriginX, move.OriginY, move.X, move.Y);
                 gameDataService.Save();
-
-                if (validationResult == MoveResult.Valid && raiseEvent)
-                {
-                    Game game = gameDataService.GetGame(move.GameId);
-                    GameConfiguration config = GameConfigCache.Instance.GetConfig(game.MatchId);
-                    if(config.GameType == GameType.Network)
-                        this.PlayerMove(this, new MoveEventArgs()
-                            {
-                                MatchId = game.MatchId,
-                                PlayerId = move.PlayerId,
-                                OriginX = move.OriginX,
-                                OriginY = move.OriginY,
-                                X = move.X,
-                                Y = move.Y
-                            });
-                }
             }
 
             this.UpdateGame(move.GameId);
+
+            if (validationResult == MoveResult.Valid && raiseEvent)
+            {
+                GameConfiguration config = GameConfigCache.Instance.GetConfig(match.MatchId);
+                if (config.GameType == GameType.Network)
+                    this.PlayerMove(this, new MoveEventArgs()
+                    {
+                        MatchId = match.MatchId,
+                        PlayerId = move.PlayerId,
+                        OriginX = move.OriginX,
+                        OriginY = move.OriginY,
+                        X = move.X,
+                        Y = move.Y
+                    });
+            }
 
             return validationResult;
         }

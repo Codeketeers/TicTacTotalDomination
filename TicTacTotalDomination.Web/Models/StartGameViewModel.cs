@@ -37,7 +37,7 @@ namespace TicTacTotalDomination.Web.Models
             this.GameTypes = new List<SelectListItem>()
             {
                 new SelectListItem(){ Text = "Local", Value = GameType.Local.ToString() },
-                new SelectListItem(){ Text = "Network", Value = GameType.Local.ToString() }
+                new SelectListItem(){ Text = "Network", Value = GameType.Network.ToString() }
             };
         }
 

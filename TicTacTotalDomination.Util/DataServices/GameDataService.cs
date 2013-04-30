@@ -105,10 +105,14 @@ namespace TicTacTotalDomination.Util.DataServices
             return this.repository.GetAIGames().FirstOrDefault(aiGame => aiGame.GameId == gameId && aiGame.PlayerId == playerId);
         }
 
-        Models.CentralServerSession IGameDataService.CreateCentralServerSession(int gameId)
+        Models.CentralServerSession IGameDataService.CreateCentralServerSession(int gameId, int? centralServerGameId = null)
         {
             CentralServerSession result = this.repository.CreateCentralServerSession();
             result.GameId = gameId;
+
+            if (centralServerGameId != null)
+                result.CentralServerGameId = centralServerGameId;
+
             this.repository.Save();
 
             return result;

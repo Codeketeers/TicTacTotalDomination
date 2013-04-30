@@ -68,7 +68,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
         public string PlayerName { get; set; }
         [DataMember(Name = "gameID")]
         public int GameId { get; set; }
-        [DataMember(Name = "flags")]
+        [DataMember(Name = "flag")]
         public string Flags { get; set; }
     }
 
@@ -79,9 +79,13 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
         public int X { get; set; }
         [DataMember(Name = "y")]
         public int Y { get; set; }
-        [DataMember(Name = "time")]
-        public DateTime MoveDatetime { get; set; }
-        [DataMember(Name = "flags")]
+        [DataMember(Name = "yourTurn")]
+        public bool YourTurn { get; set; }
+        [DataMember(Name = "newGameID")]
+        public int? NewGameId { get; set; }
+        //[DataMember(Name = "time")]
+        //public DateTime MoveDatetime { get; set; }
+        [DataMember(Name = "flag")]
         public string StatusFlag { get; set; }
         [DataMember(Name = "error")]
         public string Error { get; set; }

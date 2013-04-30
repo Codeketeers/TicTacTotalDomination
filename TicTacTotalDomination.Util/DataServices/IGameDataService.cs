@@ -19,7 +19,7 @@ namespace TicTacTotalDomination.Util.DataServices
         Match GetMatch(int? matchId, int? gameId);
         AIGame CreateAIGame(Player player, Game game, Match match);
         AIGame GetAIGame(int gameId, int playerId);
-        CentralServerSession CreateCentralServerSession(int gameId);
+        CentralServerSession CreateCentralServerSession(int gameId, int? centralServerGameId = null);
         CentralServerSession GetCentralServerSession(int? sessionId, int? centralServerGameId, int? gameId);
         ConfigSection CreateConfigSection(int matchId, string contents);
         IEnumerable<ConfigSection> GetConfigSections(int matchId);
