@@ -60,6 +60,7 @@ create table dbo.Game(
 	CreateDate datetime2(7) not null,
 	WonDate datetime2(7) null,
 	EndDate datetime2(7) null,
+	DeathMatchMode bit not null,
 	constraint CK_Game_TwoPlayers check(PlayerOneId <> PlayerTwoId),
 	constraint CK_Game_WinnerPlaying check(WinningPlayerId is null
 										or WinningPlayerId = PlayerOneId

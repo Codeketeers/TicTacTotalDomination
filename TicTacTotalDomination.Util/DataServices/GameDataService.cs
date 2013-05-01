@@ -254,6 +254,14 @@ namespace TicTacTotalDomination.Util.DataServices
             }
         }
 
+        void IGameDataService.setToDeathMatch(int gameId)
+        {
+            Game game = (this as IGameDataService).GetGame(gameId);
+            this.repository.Attach(game);
+            game.DeathMatchMode = true;
+            game.StateDate = DateTime.Now;
+        }
+
         void IGameDataService.Attach(object entity)
         {
             this.repository.Attach(entity);

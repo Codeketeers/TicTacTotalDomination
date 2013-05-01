@@ -30,6 +30,7 @@ namespace TicTacTotalDomination.Util.DataServices
         void Move(int gameId, int playerId, int? origX, int? origY, int x, int y);
         void SetPlayerTurn(int gameId, int playerId);
         void SwapPlayerTurn(int gameId);
+        void setToDeathMatch(int gameId);
         void EndGame(int gameId, int? winningPlayer);
 
         void Attach(object entity);

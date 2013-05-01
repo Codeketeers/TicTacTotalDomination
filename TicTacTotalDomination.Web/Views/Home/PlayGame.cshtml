@@ -179,46 +179,44 @@
                 var y = $(this).attr('data-y');
                 var metaData = LoadGameMetaData();
 
-                if (metaData.yourTurn) {
-                    if (metaData.gameMode == ModeDeathMatch && originX == null && originY == null) {
-                        originX = x;
-                        originY = y;
+                if (metaData.gameMode == ModeDeathMatch && originX == null && originY == null) {
+                    originX = x;
+                    originY = y;
 
-                        $('.BoardCell[data-x=' + x + '][data-y=' + y + ']').find('.cellImage').hide();
-                        $('.BoardCell[data-x=' + x + '][data-y=' + y + ']').find('.cellImage.originX').first().show();
-                    }
-                    else if (metaData.gameMode == ModePlaying || (metaData.gameMode == ModeDeathMatch && originX != null && originY != null)) {
-                        $.ajax({
-                            url: '@Url.HttpRouteUrl("APIDefault", new { Action = "Move"})'
-                            , datatype: 'json'
-                            , type: 'POST'
-                            , data: {
-                                X: x
-                                , Y: y
-                                , OriginX: originX
-                                , OriginY: originY
-                                , GameId: metaData.gameId
-                                , PlayerId: metaData.playerId
-                            }
-                            , success: function (data) {
-                                //RenderBoard(data);
+                    $('.BoardCell[data-x=' + x + '][data-y=' + y + ']').find('.cellImage').hide();
+                    $('.BoardCell[data-x=' + x + '][data-y=' + y + ']').find('.cellImage.originX').first().show();
+                }
+                else if (metaData.gameMode == ModePlaying || (metaData.gameMode == ModeDeathMatch && originX != null && originY != null)) {
+                    $.ajax({
+                        url: '@Url.HttpRouteUrl("APIDefault", new { Action = "Move"})'
+                        , datatype: 'json'
+                        , type: 'POST'
+                        , data: {
+                            X: x
+                            , Y: y
+                            , OriginX: originX
+                            , OriginY: originY
+                            , GameId: metaData.gameId
+                            , PlayerId: metaData.playerId
+                        }
+                        , success: function (data) {
+                            //RenderBoard(data);
 
-                                //piece = piece == 'X' ? 'Y' : 'X';
-                            }
-                            , complete: function () {
-                                originX = null;
-                                originY = null;
-                                CheckGameState();
-                            }
-                        });
+                            //piece = piece == 'X' ? 'Y' : 'X';
+                        }
+                        , complete: function () {
+                            originX = null;
+                            originY = null;
+                            CheckGameState();
+                        }
+                    });
 
-                        originX = null;
-                        originY = null;
-                    }
-                    else {
-                        originX = null;
-                        originY = null;
-                    }
+                    originX = null;
+                    originY = null;
+                }
+                else {
+                    originX = null;
+                    originY = null;
                 }
             });
 
@@ -232,16 +230,16 @@
     <div class="span3 offset5" id="GameBoardContainer">
         <div id="GameBoard" style="width:232px;height:232px;padding:0px;">
             @*The real beauty of MVC is that we can use c# code to leverage building our views*@
-            @for (int r = 0; r < 3; r++)
+            @for (int y = 2; y >= 0; y--)
             {
-                for (int c = 0; c < 3; c++)
+                for (int x = 0; x < 3; x++)
                 {
                     @*There are two things to notice here.
                         The first is that I used two C# for loops to build out the entire game board with one line of html.
                         The second is that I can bind to more than just view model properties.
                             Here I indicated the coordinates of each cell by binding to the fields of my for loop.
                     *@
-                    <div class="BoardCell" data-x="@r" data-y="@c" style="width:75px;height:75px;float:left;border:1px solid black;margin:0px;padding:0px;">
+                    <div class="BoardCell" data-x="@x" data-y="@y" style="width:75px;height:75px;float:left;border:1px solid black;margin:0px;padding:0px;">
                         <img class="cellImage blank" alt="Cell" src="@Url.Content("~/Content/Images/Blank.jpg")" />
                         <img class="cellImage o" alt="Cell" src="@Url.Content("~/Content/Images/O.jpg")" style="display:none;"/>
                         <img class="cellImage x" alt="Cell" src="@Url.Content("~/Content/Images/X.jpg")" style="display:none;"/>

@@ -58,11 +58,11 @@ namespace TicTacTotalDomination.Util.AI
             AIAttentionRequiredResult aiGameAttentionRequired = (AIAttentionRequiredResult)e.Argument;
             GameState state = TicTacToeHost.Instance.GetGameState(aiGameAttentionRequired.GameId, aiGameAttentionRequired.PlayerId);
             int[,] aiBoard = new int[3, 3];
-            for (int i = 0; i < 3; i++)
+            for (int x = 0; x < 3; x++)
             {
-                for (int j = 0; j < 3; j++)
+                for (int y = 0; y < 3; y++)
                 {
-                    aiBoard[i, j] = state.GameBoard[i][j] == null ? 0 : state.GameBoard[i][j].Value;
+                    aiBoard[x, y] = state.GameBoard[x][y] == null ? 0 : state.GameBoard[x][y].Value;
                 }
             }
             GameBoard ai = new GameBoard(aiBoard);

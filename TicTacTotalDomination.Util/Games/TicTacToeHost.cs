@@ -21,6 +21,7 @@ namespace TicTacTotalDomination.Util.Games
     {
         public int MatchId { get; set; }
         public int PlayerId { get; set; }
+        public PlayMode Mode { get; set; }
         public int? OriginX { get; set; }
         public int? OriginY { get; set; }
         public int X { get; set; }
@@ -236,7 +237,9 @@ namespace TicTacTotalDomination.Util.Games
             using (IGameDataService gameDataService = new GameDataService())
             {
                 Game game = gameDataService.GetGame(gameId);
-                return game.StateDate.ToString("yyyyMMddHHmmssfffff") != stateDateString;
+                if(game != null)
+                    return game.StateDate.ToString("yyyyMMddHHmmssfffff") != stateDateString;
+                return false;
             }
         }
 
@@ -245,7 +248,10 @@ namespace TicTacTotalDomination.Util.Games
             using (IGameDataService gameDataService = new GameDataService())
             {
                 Match match = gameDataService.GetMatch(matchId, null);
-                return match.StateDate.ToString("yyyyMMddHHmmssfffff") != stateDateString;
+                if (match != null)
+                    return match.StateDate.ToString("yyyyMMddHHmmssfffff") != stateDateString;
+                else
+                    return false;
             }
         }
 
@@ -284,7 +290,10 @@ namespace TicTacTotalDomination.Util.Games
                     }
 
                     if (result.GameBoard.Sum(row => row.Count(cell => cell == null || cell == 0)) <= 1 && result.Mode == PlayMode.Playing)
-                        result.Mode = PlayMode.DeathMatch;
+                    {
+                        if (game.DeathMatchMode)
+                            result.Mode = PlayMode.DeathMatch;
+                    }
 
                     result.StateDateString = game.StateDate.ToString("yyyyMMddHHmmssfffff");
                     result.YourTurn = game.CurrentPlayerId == playerId;
@@ -350,6 +359,7 @@ namespace TicTacTotalDomination.Util.Games
                 return validationResult;
 
             Match match;
+            GameState currentState = TicTacToeHost.Instance.GetGameState(move.GameId, move.PlayerId);
             using (IGameDataService gameDataService = new GameDataService())
             {
                 match = gameDataService.GetMatch(null, move.GameId);
@@ -367,6 +377,7 @@ namespace TicTacTotalDomination.Util.Games
                     {
                         MatchId = match.MatchId,
                         PlayerId = move.PlayerId,
+                        Mode = currentState.Mode,
                         OriginX = move.OriginX,
                         OriginY = move.OriginY,
                         X = move.X,
@@ -425,9 +436,33 @@ namespace TicTacTotalDomination.Util.Games
                         gameDataService.EndGame(gameId, game.PlayerOneId);
                     else if (gameWon == -1)
                         gameDataService.EndGame(gameId, game.PlayerTwoId);
-
-                    gameDataService.Save();
                 }
+
+                if (!game.DeathMatchMode)
+                {
+                    int ninthCheckPlayer = game.CurrentPlayerId == game.PlayerOneId ? 1 : -1;
+                    bool canWinWithNinth = false;
+                    for (int x = 0; x < 3; x++)
+                    {
+                        for (int y = 0; y < 3; y++)
+                        {
+                            if ((state.GameBoard[x][y] == null || state.GameBoard[x][y] == 0)
+                                && this.CanWin(state.GameBoard, ninthCheckPlayer, x, y) == ninthCheckPlayer)
+                            {
+                                canWinWithNinth = true;
+                                goto FoundEmpty;
+                            }
+                        }
+                    }
+
+                FoundEmpty:
+                    if (!canWinWithNinth)
+                    {
+                        gameDataService.setToDeathMatch(game.GameId);
+                    }
+                }
+
+                gameDataService.Save();
             }
             using (IGameDataService gameDataService = new GameDataService())
             {
@@ -489,6 +524,30 @@ namespace TicTacTotalDomination.Util.Games
             }
 
             return 0;
+        }
+
+        /// <summary>
+        /// Make a copy of the game board.  Then assume the player makes that move, and evaluate if they won.
+        /// </summary>
+        /// <param name="board"></param>
+        /// <param name="player"></param>
+        /// <param name="openX"></param>
+        /// <param name="openY"></param>
+        /// <returns></returns>
+        public int CanWin(int?[][] board, int player, int openX, int openY)
+        {
+            int?[][] boardCopy = new int?[3][];
+            for(int x = 0; x < 3; x++)
+            {
+                boardCopy[x] = new int?[3];
+                for(int y = 0; y < 3; y++)
+                {
+                    boardCopy[x][y] = board[x][y];
+                }
+            }
+            boardCopy[openX][openY] = player;
+
+            return this.IsWon(boardCopy, player);
         }
     }
 }
