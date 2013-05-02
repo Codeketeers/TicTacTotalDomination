@@ -306,6 +306,8 @@ namespace TicTacTotalDomination.Util.DataServices
                     game.WonDate = endDate;
                 }
 
+                this.repository.Save();
+
                 if ((this.repository.GetGames().Count(g => g.MatchId == match.MatchId) >= match.NumberOfRounds || winningPlayer == null) && match.EndDate == null)
                 {
                     match.EndDate = endDate;

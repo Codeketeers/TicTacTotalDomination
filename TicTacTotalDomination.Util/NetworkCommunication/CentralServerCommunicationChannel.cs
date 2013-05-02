@@ -141,6 +141,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                     using (IGameDataService dataService = new GameDataService())
                     {
                         dataService.EndGame(config.GameId, null);
+                        dataService.Save();
 
                         Match match = dataService.GetMatch(config.MatchId, null);
                         CentralServerSession session = dataService.GetCentralServerSession(null, null, config.GameId);
@@ -291,6 +292,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                 using (IGameDataService dataService = new GameDataService())
                 {
                     dataService.EndGame(gameId, null);
+                    dataService.Save();
                 }
             }
             else if (response.X >= 0 && response.Y >= 0)
@@ -362,6 +364,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                         using (IGameDataService dataService = new GameDataService())
                         {
                             dataService.EndGame(gameId, null);
+                            dataService.Save();
                         }
                     }
 
