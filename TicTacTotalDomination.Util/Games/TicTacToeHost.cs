@@ -83,6 +83,7 @@ namespace TicTacTotalDomination.Util.Games
                 Models.Player playerTwo = gameDataService.GetOrCreatePlayer(config.PlayerTwo.Name);
                 Models.Match match = gameDataService.CreateMatch(playerOne, playerTwo);
                 match.StateDate = DateTime.Now;
+                match.NumberOfRounds = config.MatchRounds;
 
                 GameConfigCache.Instance.CacheConfig(match.MatchId, config);
                 string serializedConfig = JsonSerializer.SerializeToJSON(config);
