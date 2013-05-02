@@ -8,7 +8,7 @@ using TicTacTotalDomination.Util.Games;
 
 namespace TicTacTotalDomination.Util.NetworkCommunication
 {
-    public enum StatusFlag { None, WinningMove, DrawMove, ChallengeWin, ChallengeMove, AcceptLoss }
+    public enum StatusFlag { None, WinningMove, DrawMove, ChallengeWin, ChallengeMove, AcceptLoss, AcceptDraw }
 
     [ServiceContract]
     public interface ICommunicationChannel : IDisposable

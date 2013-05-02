@@ -22,7 +22,6 @@ go
 
 create table dbo.Match(
 	MatchId int identity(1,1) primary key not null,
-	NumberOfGames int not null,
 	CreateDate datetime2(7) not null,
 	WonDate datetime2(7) null,
 	EndDate datetime2(7) null,
@@ -43,6 +42,21 @@ go
 create table dbo.ConfigSection(
 	SectionId int identity(1,1) primary key not null,
 	MatchId int foreign key references dbo.Match not null,
+	Section varchar(500) not null
+)
+go
+
+create table dbo.AuditLog(
+	LogId int identity(1,1) primary key not null,
+	LogType varchar(50) not null,
+	LogDateTime datetime2(7) not null,
+	Metadata varchar(250) null
+)
+go
+
+create table dbo.AuditLogSection(
+	SectionId int identity(1,1) primary key not null,
+	AuditLogId int foreign key references dbo.AuditLog not null,
 	Section varchar(500) not null
 )
 go
@@ -140,5 +154,19 @@ begin
 end
 go
 
+create procedure dbo.sp_GetAllLogsForMatch(@matchId int)
+as
+begin
+select lg.*
+from dbo.AuditLog lg
+	join dbo.Game gm
+		on Metadata like '%GameId:' + cast(gm.GameId as varchar) + '%'
+where gm.MatchId = @matchId
+end
+go
+
 grant execute on dbo.sp_GetAIGamesForEvaluation to TicTacUser
+go
+
+grant execute on dbo.sp_GetAllLogsForMatch to TicTacUser
 go

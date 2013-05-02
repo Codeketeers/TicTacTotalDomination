@@ -128,6 +128,9 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Helpers\HtmlHelperExtentions.cs" />
+    <Compile Include="Models\CurrentGamesViewModel.cs" />
+    <Compile Include="Models\HistoryViewModel.cs" />
+    <Compile Include="Models\LogViewModel.cs" />
     <Compile Include="Models\StartGameViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sessions\SessionManager.cs" />
@@ -141,11 +144,13 @@
     <Content Include="Content\bootstrap.css" />
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\Images\Blank.jpg" />
+    <Content Include="Content\Images\down-arrow-icon.jpg" />
     <Content Include="Content\Images\gameplay.png" />
     <Content Include="Content\Images\O.jpg" />
     <Content Include="Content\Images\OriginO.jpg" />
     <Content Include="Content\Images\OriginX.jpg" />
     <Content Include="Content\Images\total-domination-into.png" />
+    <Content Include="Content\Images\Up-Arrow-Icon.jpg" />
     <Content Include="Content\Images\win-without-background.png" />
     <Content Include="Content\Images\X.jpg" />
     <Content Include="Content\Site.css" />
@@ -236,6 +241,8 @@
     <Content Include="Views\Web.config" />
     <Content Include="Views\Home\StartGame.cshtml" />
     <Content Include="Views\Home\PlayGame.cshtml" />
+    <Content Include="Views\Home\History.cshtml" />
+    <Content Include="Views\Home\Log.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

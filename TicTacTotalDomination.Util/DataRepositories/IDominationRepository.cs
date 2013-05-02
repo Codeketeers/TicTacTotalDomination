@@ -16,6 +16,9 @@ namespace TicTacTotalDomination.Util.DataRepositories
         IQueryable<AIGame> GetAIGames();
         IQueryable<AIAttentionRequiredResult> GetAIGamesRequiringAttention();
         IQueryable<ConfigSection> GetConfigSections();
+        IQueryable<AuditLog> GetAuditLogs();
+        IQueryable<AuditLogSection> GetAuditLogSections();
+        IQueryable<AuditLog> GetAllAuditLogsForMatch(int matchId);
 
         Match CreateMatch();
         Game CreateGame();
@@ -24,6 +27,8 @@ namespace TicTacTotalDomination.Util.DataRepositories
         CentralServerSession CreateCentralServerSession();
         AIGame CreateAIGame();
         ConfigSection CreateConfigSection();
+        AuditLog CreateAuditLog();
+        AuditLogSection CreateAuditLogSection();
 
         void Attach<T>(T entity) where T : class;
         void Delete(object entity);

@@ -16,8 +16,8 @@ namespace TicTacTotalDomination.Web.Controllers
 
         public ActionResult Index()
         {
-            //ViewBag.Page = "Home";
-            return View();
+            CurrentGamesViewModel model = new CurrentGamesViewModel(SessionManager.Instance.IsPlayerLoggedIn ? (int?)SessionManager.Instance.PlayerId : null);
+            return View(model);
         }
 
         [HttpPost]
@@ -30,6 +30,14 @@ namespace TicTacTotalDomination.Web.Controllers
             SessionManager.Instance.PlayerName = player.PlayerName;
             SessionManager.Instance.PlayerId =  player.PlayerId;
             SessionManager.Instance.IsPlayerLoggedIn = true;
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpGet]
+        public ActionResult SignOut()
+        {
+            SessionManager.Instance.ClearSession();
 
             return RedirectToAction("Index");
         }
@@ -63,6 +71,20 @@ namespace TicTacTotalDomination.Web.Controllers
             SessionManager.Instance.MatchId = matchId;
 
             return View();
+        }
+
+        [HttpGet]
+        public ActionResult History()
+        {
+            HistoryViewModel model = new HistoryViewModel(SessionManager.Instance.IsPlayerLoggedIn ? (int?)SessionManager.Instance.PlayerId : null);
+            return View(model);
+        }
+
+        [HttpGet]
+        public ActionResult Log(int matchId)
+        {
+            LogViewModel model = new LogViewModel(matchId);
+            return View(model);
         }
     }
 }

@@ -27,6 +27,11 @@ namespace TicTacTotalDomination.Web.Sessions
                 return default(T);
         }
 
+        public void ClearSession()
+        {
+            this.Session.Clear();
+        }
+
         public bool IsPlayerLoggedIn
         {
             get { return this.GetSessionValue<bool>("playerLoggedIn"); }

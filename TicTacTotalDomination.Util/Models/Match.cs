@@ -13,7 +13,6 @@ namespace TicTacTotalDomination.Util.Models
         }
 
         public int MatchId { get; set; }
-        public int NumberOfGames { get; set; }
         public System.DateTime CreateDate { get; set; }
         public Nullable<System.DateTime> WonDate { get; set; }
         public Nullable<System.DateTime> EndDate { get; set; }

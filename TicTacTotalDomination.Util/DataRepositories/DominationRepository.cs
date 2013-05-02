@@ -57,6 +57,21 @@ namespace TicTacTotalDomination.Util.DataRepositories
             return this.Context.ConfigSections.AsNoTracking();
         }
 
+        IQueryable<AuditLog> IDominationRepository.GetAuditLogs()
+        {
+            return this.Context.AuditLogs.AsNoTracking();
+        }
+
+        IQueryable<AuditLogSection> IDominationRepository.GetAuditLogSections()
+        {
+            return this.Context.AuditLogSections.AsNoTracking();
+        }
+
+        IQueryable<AuditLog> IDominationRepository.GetAllAuditLogsForMatch(int matchId)
+        {
+            return this.Context.GetAllAuditLogsForMatch(matchId);
+        }
+
         Match IDominationRepository.CreateMatch()
         {
             var result = new Match();
@@ -102,6 +117,20 @@ namespace TicTacTotalDomination.Util.DataRepositories
         ConfigSection IDominationRepository.CreateConfigSection()
         {
             var result = new ConfigSection();
+            this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
+            return result;
+        }
+
+        AuditLog IDominationRepository.CreateAuditLog()
+        {
+            var result = new AuditLog();
+            this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
+            return result;
+        }
+
+        AuditLogSection IDominationRepository.CreateAuditLogSection()
+        {
+            var result = new AuditLogSection();
             this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
             return result;
         }

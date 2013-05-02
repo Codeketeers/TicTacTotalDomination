@@ -14,7 +14,6 @@ namespace TicTacTotalDomination.Util.Models.Mapping
             // Table & Column Mappings
             this.ToTable("Match");
             this.Property(t => t.MatchId).HasColumnName("MatchId");
-            this.Property(t => t.NumberOfGames).HasColumnName("NumberOfGames");
             this.Property(t => t.CreateDate).HasColumnName("CreateDate");
             this.Property(t => t.WonDate).HasColumnName("WonDate");
             this.Property(t => t.EndDate).HasColumnName("EndDate");

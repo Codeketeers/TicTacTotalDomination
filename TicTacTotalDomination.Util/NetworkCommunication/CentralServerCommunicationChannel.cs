@@ -5,6 +5,7 @@ using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.ServiceModel.Dispatcher;
 using System.Text;
@@ -12,6 +13,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using TicTacTotalDomination.Util.DataServices;
 using TicTacTotalDomination.Util.Games;
+using TicTacTotalDomination.Util.Logging;
 using TicTacTotalDomination.Util.Models;
 using TicTacTotalDomination.Util.Serialization;
 
@@ -23,6 +25,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
         public const string STATUS_DRAW_MOVE = "draw move";
         public const string STATUS_CHALLENGE_WIN = "challenge win";
         public const string STATUS_CHALLENGE_MOVE = "challenge move";
+        public const string STATUS_ACCEPT_DRAW = "accept draw";
         public const string STATUS_ACCEPT_LOSS = "accept loss";
 
         private static Lazy<CentralServerCommunicationChannel> _Instance = new Lazy<CentralServerCommunicationChannel>(() => new CentralServerCommunicationChannel());
@@ -107,21 +110,53 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
             worker.DoWork += (sender, args) =>
                 {
                     var workerConfig = (ServerRequestConfig)args.Argument;
-
                     //"http://centralserver.codeketeers.com/ServerPairing.php?challenge=James&from=Anthony"
                     JavaScriptSerializer dataSerailizer = new JavaScriptSerializer();
-                    string queryString = string.Join("&", dataSerailizer.Deserialize<Dictionary<string,string>>(config.RequestData).Where(kv => !string.IsNullOrEmpty(kv.Value)).Select(kv => string.Format("{0}={1}", kv.Key, HttpUtility.UrlEncode(kv.Value != null ? kv.Value : string.Empty))));
-                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(string.Format("{0}?{1}", config.Url, queryString));
+                    string queryString = string.Join("&", dataSerailizer.Deserialize<Dictionary<string, string>>(config.RequestData).Where(kv => !string.IsNullOrEmpty(kv.Value)).Select(kv => string.Format("{0}={1}", kv.Key, HttpUtility.UrlEncode(kv.Value != null ? kv.Value : string.Empty))));
+                    string fullUrl = string.Format("{0}?{1}", config.Url, queryString);
+                    Logger.Instance.Log("ServerRequest", string.Format("GameId:{0}|MatchId:{1}|Request:{2}", workerConfig.GameId, workerConfig.MatchId, fullUrl), JsonSerializer.SerializeToJSON(workerConfig));
+                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(fullUrl);
                     request.ContentLength = 0;
 
                     var httpResponse = (HttpWebResponse)request.GetResponse();
                     using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
                     {
                         var result = streamReader.ReadToEnd();
+                        Logger.Instance.Log("ServerResponse", string.Format("GameId:{0}|MatchId:{1}|Request:{2}", workerConfig.GameId, workerConfig.MatchId, fullUrl), result);
                         workerConfig.ResponseAction(result, workerConfig.MatchId);
                     }
                 };
             worker.RunWorkerAsync(config);
+            worker.RunWorkerCompleted += (cs, ce) =>
+            {
+                if (ce.Error != null)
+                {
+                    Exception ex = ce.Error;
+                    while (ex.InnerException != null)
+                    {
+                        ex = ex.InnerException;
+                    }
+
+                    Logger.Instance.Log("CentralServerCommunicationError", string.Format("GameId:{0}|MatchId:{1}|Error:{2}",config.GameId,config.MatchId, ex.Message), ce.Error.StackTrace);
+                    using (IGameDataService dataService = new GameDataService())
+                    {
+                        dataService.EndGame(config.GameId, null);
+
+                        Match match = dataService.GetMatch(config.MatchId, null);
+                        CentralServerSession session = dataService.GetCentralServerSession(null, null, config.GameId);
+                        Player tttdPlayer = dataService.GetPlayer(match.PlayerOneId);
+
+                        MoveRequest challengeRequest = new MoveRequest();
+                        challengeRequest.GameId = session.CentralServerGameId.Value;
+                        challengeRequest.PlayerName = tttdPlayer.PlayerName;
+                        challengeRequest.X = 0;
+                        challengeRequest.Y = 0;
+                        challengeRequest.Flags = CentralServerCommunicationChannel.GetStatus(StatusFlag.ChallengeMove);
+
+                        CentralServerCommunicationChannel.Instance.PostMove(challengeRequest, match.CurrentGameId.Value, match.MatchId);
+                    }
+                }
+            };
         }
 
         private static StatusFlag ParseStatus(string status)
@@ -138,6 +173,8 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                     return StatusFlag.DrawMove;
                 case STATUS_WINNING_MOVE:
                     return StatusFlag.WinningMove;
+                case STATUS_ACCEPT_DRAW:
+                    return StatusFlag.AcceptDraw;
                 default:
                     return StatusFlag.None;
             }
@@ -157,17 +194,24 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                     return STATUS_DRAW_MOVE;
                 case StatusFlag.WinningMove:
                     return STATUS_WINNING_MOVE;
+                case StatusFlag.AcceptDraw:
+                    return STATUS_ACCEPT_DRAW;
                 default:
                     return null;
             }
         }
-
+        [DataContract]
         private class ServerRequestConfig
         {
+            [DataMember]
             public string Url { get; set; }
+            [DataMember]
             public string RequestData { get; set; }
+            [DataMember]
             public int GameId { get; set; }
+            [DataMember]
             public int MatchId { get; set; }
+            [IgnoreDataMember]
             public Action<string,int> ResponseAction { get; set; }
         }
 
@@ -213,6 +257,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
             Match match;
             Player tttdPlayer;
             CentralServerSession session;
+            StatusFlag flag = CentralServerCommunicationChannel.ParseStatus(response.StatusFlag);
             using (IGameDataService dataService = new GameDataService())
             {
                 match = dataService.GetMatch(matchId, null);
@@ -241,6 +286,13 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                     dataService.Save();
                 }
             }
+            else if(flag == StatusFlag.ChallengeMove || flag == StatusFlag.ChallengeWin)
+            {
+                using (IGameDataService dataService = new GameDataService())
+                {
+                    dataService.EndGame(gameId, null);
+                }
+            }
             else if (response.X >= 0 && response.Y >= 0)
             {
                 if (newGame)
@@ -254,7 +306,6 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
 
                 Move move = new Move() { GameId = gameId, PlayerId = match.PlayerTwoId };
                 GameState state = TicTacToeHost.Instance.GetGameState(gameId, match.PlayerTwoId);
-                StatusFlag flag = CentralServerCommunicationChannel.ParseStatus(response.StatusFlag);
                 if (flag == StatusFlag.DrawMove)
                 {
                     move.OriginX = response.X;
@@ -287,15 +338,18 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                     challengeRequest.X = 0;
                     challengeRequest.Y = 0;
 
+                    bool challenging = false;
                     if (opponentMoveResult != MoveResult.Valid)
                     {
                         challengeRequest.Flags = CentralServerCommunicationChannel.GetStatus(StatusFlag.ChallengeMove);
+                        challenging = true;
                     }
                     else 
                     {
                         if (flag == StatusFlag.WinningMove && !postMoveState.YouWon)
                         {
                             challengeRequest.Flags = CentralServerCommunicationChannel.GetStatus(StatusFlag.ChallengeWin);
+                            challenging = true;
                         }
                         else
                         {
@@ -303,36 +357,17 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                         }
                     }
 
+                    if (challenging)
+                    {
+                        using (IGameDataService dataService = new GameDataService())
+                        {
+                            dataService.EndGame(gameId, null);
+                        }
+                    }
+
                     CentralServerCommunicationChannel.Instance.PostMove(challengeRequest, match.CurrentGameId.Value, match.MatchId);
                 }
             }
-
-            //var response = JsonSerializer.DeseriaizeFromJSON<MoveResponse>(data);
-            //if (string.IsNullOrEmpty(response.Error))
-            //{
-            //    using (IGameDataService dataService = new GameDataService())
-            //    {
-            //        Game game = dataService.GetGame(gameId);
-            //        GameState state = TicTacToeHost.Instance.GetGameState(gameId, game.PlayerTwoId);
-            //        StatusFlag status = CentralServerCommunicationChannel.ParseStatus(response.StatusFlag);
-            //        Move move = new Move();
-
-            //        move.GameId = gameId;
-            //        if(status == StatusFlag.DrawMove)
-            //        {
-            //            move.OriginX = response.X;
-            //            move.OriginY = response.Y;
-
-            //            state.
-            //        }
-            //        else if(status == StatusFlag.None || status == StatusFlag.WinningMove)
-            //        {
-            //            move.X = response.X;
-            //            move.Y = response.Y;
-            //        }
-            //        TicTacToeHost.Instance.Move()
-            //    }
-            //}
         }
         #endregion
 

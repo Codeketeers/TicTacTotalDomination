@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using TicTacTotalDomination.Util.Caching;
 using TicTacTotalDomination.Util.DataServices;
+using TicTacTotalDomination.Util.Logging;
 using TicTacTotalDomination.Util.Models;
 using TicTacTotalDomination.Util.NetworkCommunication;
 using TicTacTotalDomination.Util.Serialization;
@@ -42,10 +43,14 @@ namespace TicTacTotalDomination.Util.Games
 
         public Player SignInPlayer(string playerName)
         {
+            Player result;
             using (IGameDataService gameDataService = new GameDataService())
             {
-                return gameDataService.GetOrCreatePlayer(playerName);
+                result = gameDataService.GetOrCreatePlayer(playerName);
             }
+            Logger.Instance.Log("PlayerSignIn", null, playerName);
+
+            return result;
         }
 
         public Notification GetNotification(int playerId, int? matchId)
@@ -133,12 +138,19 @@ namespace TicTacTotalDomination.Util.Games
                 {
                     gameDataService.Attach(match);
 
-                    if (match.PlayerOneId == playerId)
+                    bool challengeStateChange = false;
+                    if (match.PlayerOneId == playerId && match.PlayerOneAccepted != state)
+                    {
                         match.PlayerOneAccepted = state;
-                    else if (match.PlayerTwoId == playerId)
+                        challengeStateChange = true;
+                    }
+                    else if (match.PlayerTwoId == playerId && match.PlayerTwoAccepted != state)
+                    {
                         match.PlayerTwoAccepted = state;
+                        challengeStateChange = true;
+                    }
 
-                    if (playerId == match.PlayerOneId || playerId == match.PlayerTwoId)
+                    if (playerId == match.PlayerOneId || playerId == match.PlayerTwoId && challengeStateChange)
                     {
                         match.StateDate = DateTime.Now;
                         if (match.PlayerOneAccepted == false && match.PlayerTwoAccepted == false)
@@ -158,7 +170,7 @@ namespace TicTacTotalDomination.Util.Games
             }
         }
 
-        public void CancelChallenge(int matchId)
+        public void CancelChallenge(int matchId, string reason)
         {
             using (IGameDataService gameDataService = new GameDataService())
             {
@@ -166,8 +178,21 @@ namespace TicTacTotalDomination.Util.Games
                 gameDataService.Attach(match);
                 match.EndDate = DateTime.Now;
                 match.StateDate = match.EndDate.Value;
+
+                List<Game> matchGames = gameDataService.Repository.GetGames().Where(game => game.MatchId == matchId).ToList();
+                foreach (var game in matchGames)
+                {
+                    if (game.EndDate == null)
+                    {
+                        gameDataService.Attach(game);
+                        game.EndDate = match.EndDate;
+                        game.StateDate = match.EndDate.Value;
+                    }
+                }
+
                 gameDataService.Save();
             }
+            Logger.Instance.Log("MatchCancelled", string.Format("match:{0}", matchId), reason);
         }
 
         ///// <summary>
@@ -213,14 +238,6 @@ namespace TicTacTotalDomination.Util.Games
                 match.StateDate = game.StateDate;
 
                 gameDataService.Save();
-
-                ////If the game isn't network mode, we default to making the creating player go first
-                //if(config.GameType != GameType.Network)
-                //{
-                //    gameDataService.SetPlayerTurn(game.GameId, playerOne.PlayerId);
-                //}
-
-                //gameDataService.Save();
 
                 return game.GameId;
             }
@@ -355,7 +372,13 @@ namespace TicTacTotalDomination.Util.Games
         public MoveResult Move(Move move, bool raiseEvent)
         {
             MoveResult validationResult = this.ValidateMove(move);
+            bool canMove = true;
             if (validationResult != MoveResult.Valid)
+                canMove = false;
+
+            Logger.Instance.Log("MoveAttempt", string.Format("GameId:{1}|PlayerId:{2}|ValidationResult:{0}", validationResult.ToString(), move.GameId, move.PlayerId), JsonSerializer.SerializeToJSON(move));
+
+            if (!canMove)
                 return validationResult;
 
             Match match;

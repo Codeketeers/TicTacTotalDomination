@@ -1,4 +1,7 @@
-﻿@using TicTacTotalDomination.Web.Helpers;
+﻿@model TicTacTotalDomination.Web.Models.CurrentGamesViewModel
+
+@using TicTacTotalDomination.Web.Helpers;
+@using TicTacTotalDomination.Web.Sessions;
 
 @{
     ViewBag.Title = "Index";
@@ -69,38 +72,69 @@
 
 <h2>Would you like to play a game?</h2>
 
-<div class="row">
-    <div class="span12">
-        @using (Html.BeginForm("SignIn", "Home"))
-        { 
-            <input type="text" name="playerName" id="playerName" />
-            <input type="submit" class="btn" value="Sign In"/>
-        }
-        @*<input type="button" id="btnStartGame" class="btn btn-success" value="Play"/>*@
-    </div>
-    <div class="span12">
-        <input type="text" id="txtOpponentName" />
-        <input type="button" class="btn" id="btnChallenge" value="Challenge" />
-    </div>
-</div>
-<div class="row">
-    <div class="span12" id="GameBoardContainer">
-        <div id="GameBoard" style="width:97px;height:97px;padding:0px;">
-            @*The real beauty of MVC is that we can use c# code to leverage building our views*@
-            @for (int r = 0; r < 3; r++)
-            {
-                for (int c = 0; c < 3; c++)
-                {
-                    @*There are two things to notice here.
-                        The first is that I used two C# for loops to build out the entire game board with one line of html.
-                        The second is that I can bind to more than just view model properties.
-                            Here I indicated the coordinates of each cell by binding to the fields of my for loop.
-                    *@
-                    <div class="BoardCell" data-x="@r" data-y="@c" style="width:30px;height:30px;float:left;border:1px solid black;margin:0px;padding:0px;">
-                        <p></p>
-                    </div>
-                }
-            }
+@if (!SessionManager.Instance.IsPlayerLoggedIn)
+{ 
+    <div class="row">
+        <div class="span10">
+            <p>Welcome to Tic Tac Total Domination. The world's most advanced tic tac toe game system. To begin, sign in.</p>
+        </div>
+        <div class="span2">
+            <img alt="arrow" src="@Url.Content("~/Content/Images/Up-Arrow-Icon.jpg")" />
         </div>
     </div>
-</div>
+}
+else
+{ 
+    <div class="row">
+        <div class="span3">
+            <p>Click play to start a new game.</p>
+        </div>
+        <div class="span1">
+            <img alt="arrow" src="@Url.Content("~/Content/Images/Up-Arrow-Icon.jpg")" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="span3">
+            <p>Or select an on-going game below.</p>
+        </div>
+        <div class="span1">
+            <img alt="arrow" src="@Url.Content("~/Content/Images/down-arrow-icon.jpg")" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            <fieldset>
+                <legend>Current Games</legend>
+
+                @if (Model.Games.Count > 0)
+                { 
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Opponent</th>
+                            <th>Started</th>
+                            <th>Turn</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var game in Model.Games.OrderBy(g => g.StartDateTime))
+                        { 
+                        <tr>
+                            <td>@game.OpponentName</td>
+                            <td>@game.StartDateTime.ToString("MM/dd/yyyy hh:mm tt")</td>
+                            <td>@game.PlayerTurn</td>
+                            <td>@Html.ActionLink("Play", "PlayGame", "Home", new { matchId = game.MatchId, playerName = SessionManager.Instance.PlayerName }, null)</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+                }
+                else 
+                {
+                <p>There are no matches currently in progress.</p>
+                }
+            </fieldset>
+        </div>
+    </div>
+}

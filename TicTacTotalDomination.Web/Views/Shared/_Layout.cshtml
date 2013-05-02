@@ -125,7 +125,7 @@
         $('document').ready(function () {
             $.ajaxSetup({ cache: false }); //This line is important if you make AJAX calls that have the same inputs on a regular basis.
 
-            window.setInterval(AttemptGetNotifications, 500);
+            window.setInterval(AttemptGetNotifications, 3000);
         });
     </script>
 
@@ -156,13 +156,13 @@
                 <ul class="nav"@* style="margin-top:10px;"*@>
                   <li @(ViewBag.Page == "Home" ? "class=active" : "")><a href="@Url.Action("Index", "Home", null)">Home</a></li>
                   <li @(ViewBag.Page == "StartGame" ? "class=active" : "")><a href="@Url.Action("StartGame", "Home", null)">Play</a></li>
-                  <li @(ViewBag.Page == "GamePlay" ? "class=active" : "")><a href="#">Game</a></li>
+                  <li @(ViewBag.Page == "History" ? "class=active" : "")><a href="@Url.Action("History", "Home", null)">History</a></li>
                 </ul>
                     
                 @if (SessionManager.Instance.IsPlayerLoggedIn)
                 { 
                     <div class="pull-right" style="margin-top:10px">
-                        Welcome - @SessionManager.Instance.PlayerName
+                        Welcome - @SessionManager.Instance.PlayerName - @Html.ActionLink("Sign Out", "SignOut", "Home")
                     </div>
                 }
                 else
@@ -191,7 +191,7 @@
     <div class="modal hide fade" id="mdlNotification" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h3>Modal header</h3>
+        <h3>Challenge Requests</h3>
       </div>
       <div class="modal-body">
         <ul id="lstNotifications"></ul>

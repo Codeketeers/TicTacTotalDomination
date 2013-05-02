@@ -14,6 +14,9 @@ namespace TicTacTotalDomination.Util.Serialization
 
             List<string> result = new List<string>();
 
+            if (string.IsNullOrEmpty(input))
+                return result;
+
             for (int i = 0; i < input.Length;)
             {
                 int end = substringLength;

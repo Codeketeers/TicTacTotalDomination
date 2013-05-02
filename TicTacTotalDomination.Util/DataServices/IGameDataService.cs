@@ -22,11 +22,18 @@ namespace TicTacTotalDomination.Util.DataServices
         CentralServerSession CreateCentralServerSession(int gameId, int? centralServerGameId = null);
         CentralServerSession GetCentralServerSession(int? sessionId, int? centralServerGameId, int? gameId);
         ConfigSection CreateConfigSection(int matchId, string contents);
+        AuditLog CreateAuditLog(string logType, string metadata);
+        AuditLogSection CreateAuditLogSection(int logId, string contents);
         IEnumerable<ConfigSection> GetConfigSections(int matchId);
         IEnumerable<Game> GetGamesForPlayer(int playerId);
         IEnumerable<Match> GetPendingMatchesForPlayer(int playerId);
+        IEnumerable<Match> GetPlayingMatchesForPlayer(int playerId);
+        IEnumerable<Match> GetAllMatchesForPlayer(int playerId);
         IEnumerable<GameMove> GetGameMoves(int gameId);
         IEnumerable<AIAttentionRequiredResult> GetAIGamesRequiringAttention();
+        IEnumerable<AuditLog> GetAllAuditLogsForMatch(int matchId);
+        IEnumerable<AuditLogSection> GetAuditLogSections(int auditLogId);
+        IEnumerable<Game> GetGamesForMatch(int matchId);
         void Move(int gameId, int playerId, int? origX, int? origY, int x, int y);
         void SetPlayerTurn(int gameId, int playerId);
         void SwapPlayerTurn(int gameId);

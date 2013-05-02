@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 
@@ -13,6 +14,13 @@ namespace TicTacTotalDomination.Util.Models
         public IQueryable<AIAttentionRequiredResult> GetAIGamesRequiringAttention()
         {
             return base.Database.SqlQuery<AIAttentionRequiredResult>("execute dbo.sp_GetAIGamesForEvaluation").AsQueryable();
+        }
+
+        public IQueryable<AuditLog> GetAllAuditLogsForMatch(int matchId)
+        {
+            SqlParameter matchParam = new SqlParameter(){ ParameterName = "matchId", Value = matchId};
+
+            return base.Database.SqlQuery<AuditLog>("EXEC [dbo].[sp_GetAllLogsForMatch] @matchId", matchParam).AsQueryable();
         }
     }
 

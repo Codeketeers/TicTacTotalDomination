@@ -145,6 +145,25 @@ namespace TicTacTotalDomination.Util.DataServices
             return result;
         }
 
+        AuditLog IGameDataService.CreateAuditLog(string logType, string metadata)
+        {
+            AuditLog result = this.repository.CreateAuditLog();
+            result.LogType = logType.Length > 50 ? logType.Substring(0, 50) : logType;
+            result.Metadata = metadata != null && metadata.Length > 250 ? metadata.Substring(0, 250) : metadata;
+            result.LogDateTime = DateTime.Now;
+
+            return result;
+        }
+
+        AuditLogSection IGameDataService.CreateAuditLogSection(int logId, string contents)
+        {
+            AuditLogSection result = this.repository.CreateAuditLogSection();
+            result.AuditLogId = logId;
+            result.Section = contents;
+
+            return result;
+        }
+
         IEnumerable<ConfigSection> IGameDataService.GetConfigSections(int matchId)
         {
             return this.repository.GetConfigSections().Where(section => section.MatchId == matchId).ToList();
@@ -162,6 +181,20 @@ namespace TicTacTotalDomination.Util.DataServices
                                                             && game.EndDate == null).ToList();
         }
 
+        IEnumerable<Match> IGameDataService.GetAllMatchesForPlayer(int playerId)
+        {
+            return this.repository.GetMatches().Where(game => game.PlayerOneId == playerId || game.PlayerTwoId == playerId).ToList();
+        }
+
+        IEnumerable<Match> IGameDataService.GetPlayingMatchesForPlayer(int playerId)
+        {
+            return this.repository.GetMatches().Where(game => (game.PlayerOneId == playerId
+                                                                || game.PlayerTwoId == playerId)
+                                                            && game.PlayerOneAccepted == true
+                                                            && game.PlayerTwoAccepted == true
+                                                            && game.EndDate == null).ToList();
+        }
+
         IEnumerable<Models.GameMove> IGameDataService.GetGameMoves(int gameId)
         {
             return this.repository.GetGameMoves().Where(move => move.GameId == gameId).ToList();
@@ -170,6 +203,21 @@ namespace TicTacTotalDomination.Util.DataServices
         IEnumerable<AIAttentionRequiredResult> IGameDataService.GetAIGamesRequiringAttention()
         {
             return this.repository.GetAIGamesRequiringAttention().ToList();
+        }
+
+        IEnumerable<AuditLog> IGameDataService.GetAllAuditLogsForMatch(int matchId)
+        {
+            return this.repository.GetAllAuditLogsForMatch(matchId).ToList();
+        }
+
+        IEnumerable<AuditLogSection> IGameDataService.GetAuditLogSections(int auditLogId)
+        {
+            return this.repository.GetAuditLogSections().Where(sec => sec.AuditLogId == auditLogId).ToList();
+        }
+
+        IEnumerable<Game> IGameDataService.GetGamesForMatch(int matchId)
+        {
+            return this.repository.GetGames().Where(game => game.MatchId == matchId).ToList();
         }
 
         void IGameDataService.Move(int gameId, int playerId, int? origX, int? origY, int x, int y)
@@ -242,14 +290,38 @@ namespace TicTacTotalDomination.Util.DataServices
                 DateTime endDate = DateTime.Now;
                 this.repository.Attach(game);
                 this.repository.Attach(match);
-                game.EndDate = endDate;
+
+                bool endingGame = false;
+                if (game.EndDate == null)
+                {
+                    game.EndDate = endDate;
+                    game.StateDate = endDate;
+                    endingGame = true;
+                }
                 match.StateDate = endDate;
 
-                if (winningPlayer != null && (winningPlayer == game.PlayerOneId || winningPlayer == game.PlayerTwoId))
+                if (endingGame && winningPlayer != null && (winningPlayer == game.PlayerOneId || winningPlayer == game.PlayerTwoId))
                 {
                     game.WinningPlayerId = winningPlayer;
                     game.WonDate = endDate;
-                    game.StateDate = endDate;
+                }
+
+                if ((this.repository.GetGames().Count(g => g.MatchId == match.MatchId) >= match.NumberOfRounds || winningPlayer == null) && match.EndDate == null)
+                {
+                    match.EndDate = endDate;
+                    if (endingGame && winningPlayer != null && (winningPlayer == game.PlayerOneId || winningPlayer == game.PlayerTwoId))
+                    {
+                        int playerOneWinCount = this.repository.GetGames().Count(g => g.MatchId == match.MatchId && g.WinningPlayerId == match.PlayerOneId);
+                        int playerTwoWinCount = this.repository.GetGames().Count(g => g.MatchId == match.MatchId && g.WinningPlayerId == match.PlayerTwoId);
+
+                        if (playerOneWinCount > playerTwoWinCount)
+                            match.WinningPlayerId = match.PlayerOneId;
+                        else if (playerTwoWinCount > playerOneWinCount)
+                            match.WinningPlayerId = match.PlayerTwoId;
+
+                        if(match.WinningPlayerId != null)
+                            match.WonDate = endDate;
+                    }
                 }
             }
         }
