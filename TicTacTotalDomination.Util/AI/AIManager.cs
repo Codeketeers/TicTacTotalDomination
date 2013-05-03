@@ -4,9 +4,12 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Timers;
+using TicTacTotalDomination.Util.Caching;
 using TicTacTotalDomination.Util.DataServices;
 using TicTacTotalDomination.Util.Games;
+using TicTacTotalDomination.Util.Logging;
 using TicTacTotalDomination.Util.Models;
+using TicTacTotalDomination.Util.NetworkCommunication;
 
 namespace TicTacTotalDomination.Util.AI
 {
@@ -48,6 +51,41 @@ namespace TicTacTotalDomination.Util.AI
                         BackgroundWorker aiWorker = new BackgroundWorker();
                         aiWorker.DoWork += aiWorker_DoWork;
                         aiWorker.RunWorkerAsync(aiGame);
+                        aiWorker.RunWorkerCompleted += (cs,ce) =>
+                            {
+                                if (ce.Error != null)
+                                {
+                                    Exception ex = ce.Error;
+                                    while (ex.InnerException != null)
+                                    {
+                                        ex = ex.InnerException;
+                                    }
+
+                                    Logger.Instance.Log("CentralServerCommunicationError", string.Format("GameId:{0}|Error:{1}",aiGame.GameId, ex.Message), ce.Error.StackTrace);
+                                    using (IGameDataService dataService = new GameDataService())
+                                    {
+                                        Match match = dataService.GetMatch(null, aiGame.GameId);
+                                        CentralServerSession session = dataService.GetCentralServerSession(null, null, aiGame.GameId);
+                                        Player tttdPlayer = dataService.GetPlayer(match.PlayerOneId);
+                                        GameConfiguration config = GameConfigCache.Instance.GetConfig(match.MatchId);
+
+                                        dataService.EndGame(aiGame.GameId, match.PlayerOneId == aiGame.PlayerId ? match.PlayerTwoId : match.PlayerOneId);
+                                        dataService.Save();
+
+                                        if (config.GameType == GameType.Network)
+                                        {
+                                            MoveRequest challengeRequest = new MoveRequest();
+                                            challengeRequest.GameId = session.CentralServerGameId.Value;
+                                            challengeRequest.PlayerName = tttdPlayer.PlayerName;
+                                            challengeRequest.X = 0;
+                                            challengeRequest.Y = 0;
+                                            challengeRequest.Flags = CentralServerCommunicationChannel.GetStatus(StatusFlag.AcceptLoss);
+
+                                            CentralServerCommunicationChannel.Instance.PostMove(challengeRequest, match.CurrentGameId.Value, match.MatchId);
+                                        }
+                                    }
+                                }
+                            };
                     }
                 }
             }
@@ -78,7 +116,22 @@ namespace TicTacTotalDomination.Util.AI
             var moveReuslt = TicTacToeHost.Instance.Move(gameMove);
             if (moveReuslt != MoveResult.Valid)
             {
+                //using(IGameDataService dataService = new GameDataService())
+                //{
+                //    Match match = dataService.GetMatch(null, aiGameAttentionRequired.GameId);
+                //    Player tttdPlayer = dataService.GetPlayer(aiGameAttentionRequired.PlayerId);
+                //    CentralServerSession session = dataService.GetCentralServerSession(null, null, aiGameAttentionRequired.GameId);
 
+                //    dataService.EndGame(aiGameAttentionRequired.GameId, match.PlayerOneId == aiGameAttentionRequired.PlayerId ? match.PlayerTwoId : match.PlayerOneId);
+
+                //    MoveRequest challengeRequest = new MoveRequest();
+                //    challengeRequest.GameId = session.CentralServerGameId.Value;
+                //    challengeRequest.PlayerName = tttdPlayer.PlayerName;
+                //    challengeRequest.X = 0;
+                //    challengeRequest.Y = 0;
+                //    challengeRequest.Flags = CentralServerCommunicationChannel.GetStatus(StatusFlag.AcceptLoss);
+                //    CentralServerCommunicationChannel.Instance.PostMove(challengeRequest, match.CurrentGameId.Value, match.MatchId);
+                //}
             }
 
             using (IGameDataService gameDataService = new GameDataService())

@@ -76,10 +76,30 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                 Player player = dataService.GetPlayer(match.PlayerOneId);
                 GameState state = TicTacToeHost.Instance.GetGameState(match.CurrentGameId.Value, player.PlayerId);
 
+                int moveCount = dataService.Repository.GetGameMoves().Where(mv => mv.GameId == match.CurrentGameId.Value).GroupBy(mv => mv.MoveDate).Count();
+
+                string flag;
+                if (state.Mode == PlayMode.DeathMatch && moveCount == 9)
+                {
+                    flag = CentralServerCommunicationChannel.GetStatus(StatusFlag.DrawMove);
+                }
+                else if (state.Mode == PlayMode.DeathMatch && moveCount == 10)
+                {
+                    flag = CentralServerCommunicationChannel.GetStatus(StatusFlag.AcceptDraw);
+                }
+                else if (state.Mode == PlayMode.Won)
+                {
+                    flag = CentralServerCommunicationChannel.GetStatus(StatusFlag.WinningMove);
+                }
+                else
+                {
+                    flag = CentralServerCommunicationChannel.GetStatus(StatusFlag.None);
+                }
+
                 var requestData = new MoveRequest();
                 requestData.PlayerName = player.PlayerName;
                 requestData.GameId = -1;
-                requestData.Flags = CentralServerCommunicationChannel.GetStatus(mode == PlayMode.DeathMatch ? StatusFlag.DrawMove : mode == PlayMode.Won ? StatusFlag.WinningMove : StatusFlag.None);
+                requestData.Flags = flag;
                 requestData.X = x;
                 requestData.Y = y;
 
@@ -91,7 +111,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
             }
         }
 
-        private void PostMove(MoveRequest request, int gameId, int matchId)
+        public void PostMove(MoveRequest request, int gameId, int matchId)
         {
             string requestJSON = JsonSerializer.SerializeToJSON<MoveRequest>(request);
             var requestConfig = new ServerRequestConfig();
@@ -160,7 +180,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
             };
         }
 
-        private static StatusFlag ParseStatus(string status)
+        public static StatusFlag ParseStatus(string status)
         {
             switch(status)
             {
@@ -181,7 +201,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
             }
         }
 
-        private static string GetStatus(StatusFlag status)
+        public static string GetStatus(StatusFlag status)
         {
             switch (status)
             {
@@ -255,6 +275,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
             var response = JsonSerializer.DeseriaizeFromJSON<MoveResponse>(data);
             bool newGame = false;
             int gameId;
+            int oldGameId;
             Match match;
             Player tttdPlayer;
             CentralServerSession session;
@@ -264,6 +285,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                 match = dataService.GetMatch(matchId, null);
                 session = dataService.GetCentralServerSession(null, null, match.CurrentGameId.Value);
                 tttdPlayer = dataService.GetPlayer(match.PlayerOneId);
+                oldGameId = match.CurrentGameId.Value;
 
                 if (response.NewGameId != null && response.NewGameId > 0 && response.NewGameId != session.CentralServerGameId)
                 {
@@ -279,7 +301,9 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                 dataService.Save();
             }
 
-            if (response.YourTurn || (newGame && response.X == null && response.Y == null))
+            if (response.YourTurn
+                //|| (newGame && response.X == null && response.Y == null)
+                )
             {
                 using (IGameDataService dataService = new GameDataService())
                 {
@@ -291,12 +315,21 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
             {
                 using (IGameDataService dataService = new GameDataService())
                 {
-                    dataService.EndGame(gameId, null);
+                    dataService.EndGame(oldGameId, null);
                     dataService.Save();
                 }
             }
             else if (response.X >= 0 && response.Y >= 0)
             {
+                if (flag == StatusFlag.AcceptLoss)
+                {
+                    using (IGameDataService dataService = new GameDataService())
+                    {
+                        dataService.EndGame(oldGameId, match.PlayerOneId);
+                        dataService.Save();
+                    }
+                }
+
                 if (newGame)
                 {
                     using (IGameDataService dataService = new GameDataService())
@@ -308,7 +341,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
 
                 Move move = new Move() { GameId = gameId, PlayerId = match.PlayerTwoId };
                 GameState state = TicTacToeHost.Instance.GetGameState(gameId, match.PlayerTwoId);
-                if (flag == StatusFlag.DrawMove)
+                if (state.Mode == PlayMode.DeathMatch)
                 {
                     move.OriginX = response.X;
                     move.OriginY = response.Y;
@@ -346,7 +379,7 @@ namespace TicTacTotalDomination.Util.NetworkCommunication
                         challengeRequest.Flags = CentralServerCommunicationChannel.GetStatus(StatusFlag.ChallengeMove);
                         challenging = true;
                     }
-                    else 
+                    else
                     {
                         if (flag == StatusFlag.WinningMove && !postMoveState.YouWon)
                         {
