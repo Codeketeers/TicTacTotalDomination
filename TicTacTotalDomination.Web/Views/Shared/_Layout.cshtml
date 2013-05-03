@@ -1,0 +1,204 @@
+﻿@using TicTacTotalDomination.Web.Sessions;
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>@ViewBag.Title</title>
+    <link href="@Url.Content("~/Content/Site.css")" rel="stylesheet" type="text/css" />
+    <link href="@Url.Content("~/Content/bootstrap.min.css")" rel="stylesheet" type="text/css" />
+    <script src="@Url.Content("~/Scripts/jQuery.js")" type="text/javascript"></script>
+    <script src="@Url.Content("~/Scripts/bootstrap.min.js")" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        function LoadMetaData() {
+            var result = {};
+            result.isLoggedIn = $('#hdnMetadata').data('logged-in');
+            result.playerName = $('#hdnMetadata').data('player-name');
+            result.playerId = $('#hdnMetadata').data('player-id');
+
+            return result;
+        }
+
+        function SaveMedata(metadata) {
+            $('#hdnMetadata').data('logged-in', metadata.isLoggedIn);
+            $('#hdnMetadata').data('player-name', metadata.playerName);
+            $('#hdnMetadata').data('player-id', metadata.playerId);
+        }
+
+        function LoadGameMetaData() {
+            var result = {};
+            result.matchId = $('#hdnGameMetadata').data('match-id');
+            result.playerId = $('#hdnGameMetadata').data('player-id');
+            result.gameId = $('#hdnGameMetadata').data('game-id');
+            result.matchStateDate = $('#hdnGameMetadata').data('match-state-date');
+            result.gameStateDate = $('#hdnGameMetadata').data('game-state-date');
+            result.playMode = $('#hdnGameMetadata').data('play-mode');
+            result.gameMode = $('#hdnGameMetadata').data('game-mode');
+            result.yourTurn = $('#hdnGameMetadata').data('your-turn');
+            result.matchYouWon = $('#hdnGameMetadata').data('match-you-won');
+            result.gameYouWon = $('#hdnGameMetadata').data('game-you-won');
+            result.matchWinningPlayerName = $('#hdnGameMetadata').data('match-winning-player-name');
+            result.gameWinningPlayerName = $('#hdnGameMetadata').data('game-winning-player-name');
+
+            return result;
+        }
+
+        function SaveGameMedata(metadata) {
+            $('#hdnGameMetadata').data('match-id', metadata.matchId);
+            $('#hdnGameMetadata').data('player-id', metadata.playerId);
+            $('#hdnGameMetadata').data('game-id', metadata.gameId);
+            $('#hdnGameMetadata').data('match-state-date', metadata.matchStateDate);
+            $('#hdnGameMetadata').data('game-state-date', metadata.gameStateDate);
+            $('#hdnGameMetadata').data('play-mode', metadata.playMode);
+            $('#hdnGameMetadata').data('game-mode', metadata.gameMode);
+            $('#hdnGameMetadata').data('your-turn', metadata.yourTurn);
+            $('#hdnGameMetadata').data('match-you-won', metadata.matchYouWon);
+            $('#hdnGameMetadata').data('game-you-won', metadata.gameYouWon);
+            $('#hdnGameMetadata').data('match-winning-player-name', metadata.matchWinningPlayerName);
+            $('#hdnGameMetadata').data('game-winning-player-name', metadata.gameWinningPlayerName);
+        }
+
+        function AttemptGetNotifications() {
+            var metadata = LoadMetaData();
+            var gameMetaData = LoadGameMetaData();
+
+            if (metadata.isLoggedIn != 'False') {
+                $.ajax({
+                    url: '@Url.HttpRouteUrl("APIDefault", new { Action = "GetNotification"})'
+                    , datatype: 'json'
+                    , data: {
+                        playerId: metadata.playerId
+                        , matchId: gameMetaData.matchId
+                    }
+                    , success: function (data) {
+                        $('#lstNotifications').empty();
+                        if (data.Notifications.length > 0) {
+                            $('#btnNotifications').addClass('btn-danger');
+                            $('#btnNotifications').empty().html(data.Notifications.length);
+                            $('#btnNotifications').data('notification-count', data.Notifications.length);
+
+                            var metadata = LoadMetaData();
+                            $.each(data.Notifications, function (i, v) {
+                                var notification = $(document.createElement('li'));
+                                notification.addClass('matchNotification');
+                                notification.data('match-id', v.MatchId);
+
+                                var notificationAccept = $(document.createElement('a'));
+                                notificationAccept.html('Accept');
+                                notificationAccept.attr('href', '@Url.Action("PlayGame", "Home", null)' + '?playerName=' + metadata.playerName + '&matchId=' + v.MatchId);
+                                notificationAccept.attr('target', '_blank');
+                                notificationAccept.addClass('acceptChallenge');
+
+                                var notificationDecline = $(document.createElement('a'));
+                                notificationDecline.html('Decline');
+                                notificationDecline.attr('href', '@Url.HttpRouteUrl("APIDefault", new { Action = "DeclineMatch"})' + '?playerId=' + metadata.playerId + '&matchId=' + v.MatchId);
+                                notificationDecline.addClass('declineChallenge');
+
+                                notification.html(v.OpponentName + ' - ');
+                                notification.append(notificationAccept);
+                                notification.append('&nbsp;&nbsp;');
+                                notification.append(notificationDecline);
+
+                                $('#lstNotifications').append(notification);
+                            });
+
+                            BindNotificationDecline();
+                        }
+                        else {
+                            $('#btnNotifications').removeClass('btn-danger');
+                            $('#btnNotifications').empty().html('0');
+                            $('#btnNotifications').data('notification-count', data.Notifications.length);
+                        }
+                    }
+                });
+            }
+        }
+
+        function BindNotificationDecline() {
+            $('.declineChallenge').click(function (event) {
+                event.preventDefault();
+
+                $.ajax({ url: $(this).attr('href') });
+            });
+        }
+
+        $('document').ready(function () {
+            $.ajaxSetup({ cache: false }); //This line is important if you make AJAX calls that have the same inputs on a regular basis.
+
+            window.setInterval(AttemptGetNotifications, 3000);
+        });
+    </script>
+
+    @RenderSection("HeadScripts", false)
+</head>
+
+<body>
+    <input type="hidden" id="hdnMetadata" data-logged-in="@SessionManager.Instance.IsPlayerLoggedIn"
+                                            data-player-id="@SessionManager.Instance.PlayerId"
+                                            data-player-name="@SessionManager.Instance.PlayerName" />
+    <input type="hidden" id="hdnGameMetadata" data-player-id="@SessionManager.Instance.PlayerId" 
+                                        data-match-id="@SessionManager.Instance.MatchId" 
+                                        data-match-state-date=""
+                                        data-game-state-date=""
+                                        data-play-mode=""
+                                        data-game-mode=""
+                                        data-your-turn=""
+                                        data-match-you-won=""
+                                        data-game-you-won=""
+                                        data-match-winning-player-name=""
+                                        data-game-winning-player-name="" />
+
+    <div class="container">
+        <div class="navbar">
+            <div class="navbar-inner">
+                <div class="container">
+                <a class="brand" href="@Url.Action("Index", "Home")" style="padding-top:0;padding-bottom:0;"><img alt="TOTAL-DOMINATION" src="@Url.Content("~/Content/Images/total-domination-into.png")" style="height:40px;" /></a>
+                <ul class="nav"@* style="margin-top:10px;"*@>
+                  <li @(ViewBag.Page == "Home" ? "class=active" : "")><a href="@Url.Action("Index", "Home", null)">Home</a></li>
+                  <li @(ViewBag.Page == "StartGame" ? "class=active" : "")><a href="@Url.Action("StartGame", "Home", null)">Play</a></li>
+                  <li @(ViewBag.Page == "History" ? "class=active" : "")><a href="@Url.Action("History", "Home", null)">History</a></li>
+                </ul>
+                    
+                @if (SessionManager.Instance.IsPlayerLoggedIn)
+                { 
+                    <div class="pull-right" style="margin-top:10px">
+                        Welcome - @SessionManager.Instance.PlayerName - @Html.ActionLink("Sign Out", "SignOut", "Home")
+                    </div>
+                }
+                else
+                {
+                    using (Html.BeginForm("SignIn", "Home", null, FormMethod.Post, new { @class = "form-inline pull-right", style = "margin-top:0px;margin-bottom:0px;" }))
+                    { 
+                      <input type="text" class="input-small" placeholder="Player Name" name="playerName" />
+                      <button type="submit" class="btn">Sign In</button>
+                    }
+                }
+
+                    <div class="pull-right" style="margin-right:10px;">
+                        <a href="#mdlNotification" id="btnNotifications" class="btn" role="button" data-toggle="modal">0</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        @RenderBody()
+
+        <div class="navbar navbar-fixed-bottom">
+            <p>&copy; Codeketeers 2013</p>
+        </div>
+    </div>
+
+    <div class="modal hide fade" id="mdlNotification" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h3>Challenge Requests</h3>
+      </div>
+      <div class="modal-body">
+        <ul id="lstNotifications"></ul>
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+    @RenderSection("TailScripts", false)
+</body>
+</html>

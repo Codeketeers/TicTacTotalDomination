@@ -7,6 +7,7 @@ namespace TicTacTotalDomination.Util.Models
     {
         public Player()
         {
+            this.AIGames = new List<AIGame>();
             this.Games = new List<Game>();
             this.Games1 = new List<Game>();
             this.Games2 = new List<Game>();
@@ -19,6 +20,7 @@ namespace TicTacTotalDomination.Util.Models
 
         public int PlayerId { get; set; }
         public string PlayerName { get; set; }
+        public virtual ICollection<AIGame> AIGames { get; set; }
         public virtual ICollection<Game> Games { get; set; }
         public virtual ICollection<Game> Games1 { get; set; }
         public virtual ICollection<Game> Games2 { get; set; }

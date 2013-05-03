@@ -42,6 +42,36 @@ namespace TicTacTotalDomination.Util.DataRepositories
             return this.Context.CentralServerSessions.AsNoTracking();
         }
 
+        IQueryable<AIGame> IDominationRepository.GetAIGames()
+        {
+            return this.Context.AIGames.AsNoTracking();
+        }
+
+        IQueryable<AIAttentionRequiredResult> IDominationRepository.GetAIGamesRequiringAttention()
+        {
+            return this.Context.GetAIGamesRequiringAttention();
+        }
+
+        IQueryable<ConfigSection> IDominationRepository.GetConfigSections()
+        {
+            return this.Context.ConfigSections.AsNoTracking();
+        }
+
+        IQueryable<AuditLog> IDominationRepository.GetAuditLogs()
+        {
+            return this.Context.AuditLogs.AsNoTracking();
+        }
+
+        IQueryable<AuditLogSection> IDominationRepository.GetAuditLogSections()
+        {
+            return this.Context.AuditLogSections.AsNoTracking();
+        }
+
+        IQueryable<AuditLog> IDominationRepository.GetAllAuditLogsForMatch(int matchId)
+        {
+            return this.Context.GetAllAuditLogsForMatch(matchId);
+        }
+
         Match IDominationRepository.CreateMatch()
         {
             var result = new Match();
@@ -77,7 +107,35 @@ namespace TicTacTotalDomination.Util.DataRepositories
             return result;
         }
 
-        void IDominationRepository.Attach(object entity)
+        AIGame IDominationRepository.CreateAIGame()
+        {
+            var result = new AIGame();
+            this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
+            return result;
+        }
+
+        ConfigSection IDominationRepository.CreateConfigSection()
+        {
+            var result = new ConfigSection();
+            this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
+            return result;
+        }
+
+        AuditLog IDominationRepository.CreateAuditLog()
+        {
+            var result = new AuditLog();
+            this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
+            return result;
+        }
+
+        AuditLogSection IDominationRepository.CreateAuditLogSection()
+        {
+            var result = new AuditLogSection();
+            this.Context.Entry(result).State = System.Data.Entity.EntityState.Added;
+            return result;
+        }
+
+        void IDominationRepository.Attach<T>(T entity)
         {
             this.Context.Entry(entity).State = System.Data.Entity.EntityState.Modified;
         }
