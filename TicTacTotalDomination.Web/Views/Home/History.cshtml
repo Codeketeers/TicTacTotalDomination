@@ -1,0 +1,42 @@
+﻿@model TicTacTotalDomination.Web.Models.HistoryViewModel
+
+@using TicTacTotalDomination.Web.Sessions;
+
+@{
+    ViewBag.Title = "History";
+}
+
+<fieldset>
+    <legend>Match History</legend>
+
+    @if (Model.Histories.Count > 0)
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Opponent</th>
+                    <th>Started</th>
+                    <th>Ended</th>
+                    <th>Winner</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var game in Model.Histories.OrderBy(g => g.StartDateTime))
+                { 
+                <tr>
+                    <td>@game.OpponentName</td>
+                    <td>@game.StartDateTime.ToString("MM/dd/yyyy hh:mm tt")</td>
+                    <td>@(game.EndDate != null ? game.EndDate.Value.ToString("MM/dd/yyyy hh:mm tt") : string.Empty)</td>
+                    <td>@game.Winner</td>
+                    <td>@Html.ActionLink("View Log", "Log", "Home", new { matchId = game.MatchId }, null)</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    { 
+        <p>No matches in history</p>
+    }
+</fieldset>

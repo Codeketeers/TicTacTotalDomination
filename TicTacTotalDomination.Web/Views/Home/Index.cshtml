@@ -1,0 +1,140 @@
+﻿@model TicTacTotalDomination.Web.Models.CurrentGamesViewModel
+
+@using TicTacTotalDomination.Web.Helpers;
+@using TicTacTotalDomination.Web.Sessions;
+
+@{
+    ViewBag.Title = "Index";
+    Html.SetActivePage("Home");
+}
+
+@section HeadScripts
+{
+    @*The following if statement and its contents are not required and are only for intellisense because I'm lazy. *@
+    @if (false)
+    {
+        <script src="@Url.Content("~/Scripts/jQuery.js")" type="text/javascript"></script>
+    }
+
+    <script type="text/javascript">
+        var piece = 'X';
+
+        function RenderBoard(data){
+            $('#GameBoardContainer').empty().html(data); //I'm plugging the game board that we we're given into the page here.
+
+            //Lets make sure we set up all the buttons/gizmos/etc. we just rendered.
+            BindCellClick();
+        }
+
+        function BindCellClick() {
+            $('.BoardCell').click(function (event) {
+                var x = $(this).attr('data-x');
+                var y = $(this).attr('data-y');
+                var gameId = $('#hdnGameId').val();
+
+                $.ajax({
+                    url: '@Url.Action("Move", "Game")'
+                    , datatype: 'html'
+                    , data: {
+                        x: x
+                        , y: y
+                        , gameId: gameId
+                        , piece: piece
+                    }
+                    , success: function (data) {
+                        RenderBoard(data);
+
+                        piece = piece == 'X' ? 'Y' : 'X';
+                    }
+                });
+            });
+        }
+
+        $('document').ready(function () {
+            $('#btnStartGame').click(function (event) {
+                $.ajax({
+                    url: '@Url.Action("StartGame", "Game")'
+                    , datatype: 'html' //Because we expect an html rendering of the game to result from this call
+                    , data: { //Pay special atention to the action in the controller, these properties are going to bind to the method parameter.
+                        PlayerOneName: 'Maverick'
+                        , PlayerTwoName: 'Goose'
+                        , PlayerMode: 'Local'
+                        , NumberOfPlayers: 2
+                    }
+                    , success: function (data) {
+                        RenderBoard(data);
+                    }
+                });
+            });
+        });
+    </script>
+}
+
+<h2>Would you like to play a game?</h2>
+
+@if (!SessionManager.Instance.IsPlayerLoggedIn)
+{ 
+    <div class="row">
+        <div class="span10">
+            <p>Welcome to Tic Tac Total Domination. The world's most advanced tic tac toe game system. To begin, sign in.</p>
+        </div>
+        <div class="span2">
+            <img alt="arrow" src="@Url.Content("~/Content/Images/Up-Arrow-Icon.jpg")" />
+        </div>
+    </div>
+}
+else
+{ 
+    <div class="row">
+        <div class="span3">
+            <p>Click play to start a new game.</p>
+        </div>
+        <div class="span1">
+            <img alt="arrow" src="@Url.Content("~/Content/Images/Up-Arrow-Icon.jpg")" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="span3">
+            <p>Or select an on-going game below.</p>
+        </div>
+        <div class="span1">
+            <img alt="arrow" src="@Url.Content("~/Content/Images/down-arrow-icon.jpg")" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="span12">
+            <fieldset>
+                <legend>Current Games</legend>
+
+                @if (Model.Games.Count > 0)
+                { 
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Opponent</th>
+                            <th>Started</th>
+                            <th>Turn</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var game in Model.Games.OrderBy(g => g.StartDateTime))
+                        { 
+                        <tr>
+                            <td>@game.OpponentName</td>
+                            <td>@game.StartDateTime.ToString("MM/dd/yyyy hh:mm tt")</td>
+                            <td>@game.PlayerTurn</td>
+                            <td>@Html.ActionLink("Play", "PlayGame", "Home", new { matchId = game.MatchId, playerName = SessionManager.Instance.PlayerName }, null)</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+                }
+                else 
+                {
+                <p>There are no matches currently in progress.</p>
+                }
+            </fieldset>
+        </div>
+    </div>
+}

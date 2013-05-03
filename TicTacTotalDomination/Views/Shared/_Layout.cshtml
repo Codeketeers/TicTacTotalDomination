@@ -3,10 +3,70 @@
 <head>
     <title>@ViewBag.Title</title>
     <link href="@Url.Content("~/Content/Site.css")" rel="stylesheet" type="text/css" />
-    <script src="@Url.Content("~/Scripts/jquery-1.7.1.min.js")" type="text/javascript"></script>
+    <link href="@Url.Content("~/Content/bootstrap.min.css")" rel="stylesheet" type="text/css" />
+    <script src="@Url.Content("~/Scripts/jQuery.js")" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        function AttemptGetNotifications() {
+            if ('@HttpContext.Current.Session["playerName"]' != '') {
+                var gameId = $('#hdnGameId').val();
+
+                $.ajax({
+                    url: '@Url.RouteUrl("API Default", new { controller = "Game", Action = "GetNotification"})'
+                    , datatype: 'json'
+                    , data: {
+                        playerId: '@HttpContext.Current.Session["playerId"]'
+                        , gameId: gameId
+                    }
+                    , success: function (data) {
+                        debugger;
+                    }
+                });
+            }
+        }
+
+        $('document').ready(function () {
+            $.ajaxSetup({ cache: false }); //This line is important if you make AJAX calls that have the same inputs on a regular basis.
+
+            window.setInterval(AttemptGetNotifications, 500);
+        });
+    </script>
+
+    @RenderSection("HeadScripts", false)
 </head>
 
 <body>
-    @RenderBody()
+    <input type="hidden" id="hdnMetadata" />
+    <div class="container">
+        <div class="navbar">
+            <div class="navbar-inner">
+                <div class="container">
+                <a class="brand" href="@Url.Action("Index", "Home")"><img alt="TOTAL-DOMINATION" src="@Url.Content("~/Content/Images/total-domination-into.png")" style="height:40px;" /></a>
+
+                @if (HttpContext.Current.Session["playerName"] != null)
+                { 
+                    <div class="pull-right" style="margin-top:20px">
+                        Welcome - @HttpContext.Current.Session["PlayerName"]
+                    </div>
+                }
+                else
+                {
+                    using (Html.BeginForm("SignIn", "Home", FormMethod.Post, new { @class = "form-inline pull-right", style = "margin-top:10px;margin-botton:0px;" }))
+                    { 
+                      <input type="text" class="input-small" placeholder="Player Name" name="playerName" />
+                      <button type="submit" class="btn">Sign In</button>
+                    }
+                }
+                    </div>
+            </div>
+        </div>
+        
+        @RenderBody()
+
+        <div class="navbar navbar-fixed-bottom">
+            <p>&copy; Codeketeers 2013</p>
+        </div>
+    </div>
+    @RenderSection("TailScripts", false)
 </body>
 </html>

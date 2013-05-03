@@ -13,6 +13,8 @@ namespace TicTacTotalDomination.Util.DataServices
         private bool disposed = false;
         private IDominationRepository repository;
 
+        public IDominationRepository Repository { get { return this.repository; } }
+
         public GameDataService()
         {
             string connecitonString = ConfigurationManager.ConnectionStrings["TicTacTotalDomination"].ConnectionString;
@@ -33,13 +35,19 @@ namespace TicTacTotalDomination.Util.DataServices
             return result;
         }
 
+        Player IGameDataService.GetPlayer(int playerId)
+        {
+            return this.repository.GetPlayers().FirstOrDefault(player => player.PlayerId == playerId);
+        }
+
         Models.Game IGameDataService.CreateGame(Models.Player playerOne, Models.Player playerTwo, Models.Match match)
         {
             Game result = this.repository.CreateGame();
-            result.MatchId = match != null ? new Nullable<int>(match.MatchId) : null;
+            result.MatchId = match.MatchId;
             result.PlayerOneId = playerOne.PlayerId;
             result.PlayerTwoId = playerTwo.PlayerId;
             result.CreateDate = DateTime.Now;
+            result.StateDate = result.CreateDate;
             this.repository.Save();
 
             return result;
@@ -80,10 +88,31 @@ namespace TicTacTotalDomination.Util.DataServices
             return result;
         }
 
-        Models.CentralServerSession IGameDataService.CreateCentralServerSession(int gameId)
+        AIGame IGameDataService.CreateAIGame(Player player, Game game, Match match)
+        {
+            AIGame result = this.repository.CreateAIGame();
+            result.PlayerId = player.PlayerId;
+            result.GameId = game.GameId;
+
+            if (match != null)
+                result.MatchId = match.MatchId;
+
+            return result;
+        }
+
+        AIGame IGameDataService.GetAIGame(int gameId, int playerId)
+        {
+            return this.repository.GetAIGames().FirstOrDefault(aiGame => aiGame.GameId == gameId && aiGame.PlayerId == playerId);
+        }
+
+        Models.CentralServerSession IGameDataService.CreateCentralServerSession(int gameId, int? centralServerGameId = null)
         {
             CentralServerSession result = this.repository.CreateCentralServerSession();
             result.GameId = gameId;
+
+            if (centralServerGameId != null)
+                result.CentralServerGameId = centralServerGameId;
+
             this.repository.Save();
 
             return result;
@@ -107,14 +136,93 @@ namespace TicTacTotalDomination.Util.DataServices
             return result;
         }
 
+        ConfigSection IGameDataService.CreateConfigSection(int matchId, string contents)
+        {
+            ConfigSection result = this.repository.CreateConfigSection();
+            result.MatchId = matchId;
+            result.Section = contents;
+
+            return result;
+        }
+
+        AuditLog IGameDataService.CreateAuditLog(string logType, string metadata)
+        {
+            AuditLog result = this.repository.CreateAuditLog();
+            result.LogType = logType.Length > 50 ? logType.Substring(0, 50) : logType;
+            result.Metadata = metadata != null && metadata.Length > 250 ? metadata.Substring(0, 250) : metadata;
+            result.LogDateTime = DateTime.Now;
+
+            return result;
+        }
+
+        AuditLogSection IGameDataService.CreateAuditLogSection(int logId, string contents)
+        {
+            AuditLogSection result = this.repository.CreateAuditLogSection();
+            result.AuditLogId = logId;
+            result.Section = contents;
+
+            return result;
+        }
+
+        IEnumerable<ConfigSection> IGameDataService.GetConfigSections(int matchId)
+        {
+            return this.repository.GetConfigSections().Where(section => section.MatchId == matchId).ToList();
+        }
+
+        IEnumerable<Game> IGameDataService.GetGamesForPlayer(int playerId)
+        {
+            return this.repository.GetGames().Where(game => game.PlayerOneId == playerId || game.PlayerTwoId == playerId).ToList();
+        }
+
+        IEnumerable<Match> IGameDataService.GetPendingMatchesForPlayer(int playerId)
+        {
+            return this.repository.GetMatches().Where(game => ((game.PlayerOneId == playerId && game.PlayerOneAccepted == null) 
+                                                                || (game.PlayerTwoId == playerId && game.PlayerTwoAccepted == null))
+                                                            && game.EndDate == null).ToList();
+        }
+
+        IEnumerable<Match> IGameDataService.GetAllMatchesForPlayer(int playerId)
+        {
+            return this.repository.GetMatches().Where(game => game.PlayerOneId == playerId || game.PlayerTwoId == playerId).ToList();
+        }
+
+        IEnumerable<Match> IGameDataService.GetPlayingMatchesForPlayer(int playerId)
+        {
+            return this.repository.GetMatches().Where(game => (game.PlayerOneId == playerId
+                                                                || game.PlayerTwoId == playerId)
+                                                            && game.PlayerOneAccepted == true
+                                                            && game.PlayerTwoAccepted == true
+                                                            && game.EndDate == null).ToList();
+        }
+
         IEnumerable<Models.GameMove> IGameDataService.GetGameMoves(int gameId)
         {
             return this.repository.GetGameMoves().Where(move => move.GameId == gameId).ToList();
         }
 
+        IEnumerable<AIAttentionRequiredResult> IGameDataService.GetAIGamesRequiringAttention()
+        {
+            return this.repository.GetAIGamesRequiringAttention().ToList();
+        }
+
+        IEnumerable<AuditLog> IGameDataService.GetAllAuditLogsForMatch(int matchId)
+        {
+            return this.repository.GetAllAuditLogsForMatch(matchId).ToList();
+        }
+
+        IEnumerable<AuditLogSection> IGameDataService.GetAuditLogSections(int auditLogId)
+        {
+            return this.repository.GetAuditLogSections().Where(sec => sec.AuditLogId == auditLogId).ToList();
+        }
+
+        IEnumerable<Game> IGameDataService.GetGamesForMatch(int matchId)
+        {
+            return this.repository.GetGames().Where(game => game.MatchId == matchId).ToList();
+        }
+
         void IGameDataService.Move(int gameId, int playerId, int? origX, int? origY, int x, int y)
         {
-            Game game = this.repository.GetGames().FirstOrDefault(dbGame => dbGame.GameId == gameId);
+            Game game = (this as IGameDataService).GetGame(gameId);
             if (game != null && (game.PlayerOneId == playerId || game.PlayerTwoId == playerId))
             {
                 DateTime moveDateTime = DateTime.Now;
@@ -128,7 +236,7 @@ namespace TicTacTotalDomination.Util.DataServices
                     originUnset.X = origX.Value;
                     originUnset.y = origY.Value;
                 }
-
+                
                 GameMove move = this.repository.CreateGameMove();
                 move.GameId = gameId;
                 move.IsSettingPiece = true;
@@ -137,8 +245,95 @@ namespace TicTacTotalDomination.Util.DataServices
                 move.X = x;
                 move.y = y;
 
+                this.repository.Attach(game);
+                game.StateDate = moveDateTime;
+                //if (game.CurrentPlayerId == game.PlayerOneId)
+                //    game.CurrentPlayerId = game.PlayerTwoId;
+                //else if (game.CurrentPlayerId == game.PlayerTwoId)
+                //    game.CurrentPlayerId = game.PlayerOneId;
+
                 this.repository.Save();
             }
+        }
+
+        void IGameDataService.SetPlayerTurn(int gameId, int playerId)
+        {
+            Game game = (this as IGameDataService).GetGame(gameId);
+            if (game != null && (game.PlayerOneId == playerId || game.PlayerTwoId == playerId))
+            {
+                this.repository.Attach(game);
+                game.CurrentPlayerId = playerId;
+                game.StateDate = DateTime.Now;
+            }
+        }
+
+        void IGameDataService.SwapPlayerTurn(int gameId)
+        {
+            Game game = (this as IGameDataService).GetGame(gameId);
+            if (game != null)
+            {
+                this.repository.Attach(game);
+                if (game.CurrentPlayerId == game.PlayerOneId)
+                    game.CurrentPlayerId = game.PlayerTwoId;
+                else if (game.CurrentPlayerId == game.PlayerTwoId)
+                    game.CurrentPlayerId = game.PlayerOneId;
+                //Otherwise, there is no current player, so we have to way of knowing how to swap. Do nothing.
+            }
+        }
+
+        void IGameDataService.EndGame(int gameId, int? winningPlayer)
+        {
+            Game game = (this as IGameDataService).GetGame(gameId);
+            Match match = (this as IGameDataService).GetMatch(null, gameId);
+            if (game != null)
+            {
+                DateTime endDate = DateTime.Now;
+                this.repository.Attach(game);
+                this.repository.Attach(match);
+
+                bool endingGame = false;
+                if (game.EndDate == null)
+                {
+                    game.EndDate = endDate;
+                    game.StateDate = endDate;
+                    endingGame = true;
+                }
+                match.StateDate = endDate;
+
+                if (endingGame && winningPlayer != null && (winningPlayer == game.PlayerOneId || winningPlayer == game.PlayerTwoId))
+                {
+                    game.WinningPlayerId = winningPlayer;
+                    game.WonDate = endDate;
+                }
+
+                this.repository.Save();
+
+                if ((this.repository.GetGames().Count(g => g.MatchId == match.MatchId) >= match.NumberOfRounds || winningPlayer == null) && match.EndDate == null)
+                {
+                    match.EndDate = endDate;
+                    if (endingGame && winningPlayer != null && (winningPlayer == game.PlayerOneId || winningPlayer == game.PlayerTwoId))
+                    {
+                        int playerOneWinCount = this.repository.GetGames().Count(g => g.MatchId == match.MatchId && g.WinningPlayerId == match.PlayerOneId);
+                        int playerTwoWinCount = this.repository.GetGames().Count(g => g.MatchId == match.MatchId && g.WinningPlayerId == match.PlayerTwoId);
+
+                        if (playerOneWinCount > playerTwoWinCount)
+                            match.WinningPlayerId = match.PlayerOneId;
+                        else if (playerTwoWinCount > playerOneWinCount)
+                            match.WinningPlayerId = match.PlayerTwoId;
+
+                        if(match.WinningPlayerId != null)
+                            match.WonDate = endDate;
+                    }
+                }
+            }
+        }
+
+        void IGameDataService.setToDeathMatch(int gameId)
+        {
+            Game game = (this as IGameDataService).GetGame(gameId);
+            this.repository.Attach(game);
+            game.DeathMatchMode = true;
+            game.StateDate = DateTime.Now;
         }
 
         void IGameDataService.Attach(object entity)

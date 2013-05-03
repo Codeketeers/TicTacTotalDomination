@@ -1,0 +1,38 @@
+﻿@model TicTacTotalDomination.Web.Models.LogViewModel
+
+@{
+    ViewBag.Title = "Log";
+}
+
+<fieldset>
+    <legend>Match Log</legend>
+
+    @if (Model.Logs.Count > 0)
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Log Type</th>
+                    <th>Log Date Time</th>
+                    <th>Metadata</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var game in Model.Logs.OrderBy(g => g.LogDateTime))
+                { 
+                <tr>
+                    <td>@game.LogType</td>
+                    <td>@game.LogDateTime.ToString("MM/dd/yyyy hh:mm tt")</td>
+                    <td>@game.Metadata</td>
+                    <td>@game.Message</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    { 
+        <p>No logs to display</p>
+    }
+</fieldset>
