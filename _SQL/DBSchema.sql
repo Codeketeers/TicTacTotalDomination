@@ -127,8 +127,6 @@ if not exists (select name from TicTacTotalDomination.sys.database_principals wh
 begin
 	use TicTacTotalDomination
 	create user TicTacUser for login TicTacUser;
-	exec sp_addrolemember 'db_datareader', 'TicTacUser'
-	exec sp_addrolemember 'db_datawriter', 'TicTacUser'
 end
 go
 
@@ -164,6 +162,9 @@ from dbo.AuditLog lg
 where gm.MatchId = @matchId
 end
 go
+
+exec sp_addrolemember 'db_datareader', 'TicTacUser'
+exec sp_addrolemember 'db_datawriter', 'TicTacUser'
 
 grant execute on dbo.sp_GetAIGamesForEvaluation to TicTacUser
 go
