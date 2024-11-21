@@ -1,0 +1,78 @@
+﻿@{
+    ViewBag.Title = "Index";
+}
+
+@section HeadScripts
+{
+    @*The following if statement and its contents are not required and are only for intellisense because I'm lazy. *@
+    @if (false)
+    {
+        <script src="@Url.Content("~/Scripts/jQuery.js")" type="text/javascript"></script>
+    }
+
+    <script type="text/javascript">
+        var piece = 'X';
+
+        function RenderBoard(data){
+            $('#GameBoardContainer').empty().html(data); //I'm plugging the game board that we we're given into the page here.
+
+            //Lets make sure we set up all the buttons/gizmos/etc. we just rendered.
+            BindCellClick();
+        }
+
+        function BindCellClick() {
+            $('.BoardCell').click(function (event) {
+                var x = $(this).attr('data-x-coordinate');
+                var y = $(this).attr('data-y-coordinate');
+                var gameId = $('#hdnGameId').val();
+
+                $.ajax({
+                    url: '@Url.Action("Move", "Game")'
+                    , datatype: 'html'
+                    , data: {
+                        x: x
+                        , y: y
+                        , gameId: gameId
+                        , piece: piece
+                    }
+                    , success: function (data) {
+                        RenderBoard(data);
+
+                        piece = piece == 'X' ? 'Y' : 'X';
+                    }
+                });
+            });
+        }
+
+        $('document').ready(function () {
+            $('#btnStartGame').click(function (event) {
+                $.ajax({
+                    url: '@Url.Action("StartGame", "Game")'
+                    , datatype: 'html' //Because we expect an html rendering of the game to result from this call
+                    , data: { //Pay special atention to the action in the controller, these properties are going to bind to the method parameter.
+                        PlayerOneName: 'Maverick'
+                        , PlayerTwoName: 'Goose'
+                        , PlayerMode: 'Local'
+                        , NumberOfPlayers: 2
+                    }
+                    , success: function (data) {
+                        RenderBoard(data);
+                    }
+                });
+            });
+        });
+    </script>
+}
+
+<h2>Would you like to play a game?</h2>
+
+<div class="row">
+    <div class="span12">
+        <input type="button" id="btnStartGame" class="btn btn-success" value="Play"/>
+    </div>
+</div>
+<div class="row">
+    <div class="span12" id="GameBoardContainer">
+
+    </div>
+</div>
